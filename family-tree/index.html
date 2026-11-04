@@ -425,7 +425,7 @@ const artBlock = (id, alt) => { const a = artOf(id); return a ? `<div class="p-a
 const groups = f => `<div class="group"><h3>Parents</h3>${chips(f.parents)}</div>
       <div class="group"><h3>Its kids at Redbird</h3>${chips(f.children)}</div>
       <div class="group"><h3>Shares a parent with</h3>${chips(f.siblings)}</div>`;
-function select(id) {
+function select(id, entry) {
   const n = N[id]; if (!n) return;
   if (view === 'today' && !n.today) { view = 'all'; applyView(); }
   sel = id; hintGone = true;
@@ -469,11 +469,13 @@ function select(id) {
   if (art) { art.parentNode.setAttribute('role', 'button'); art.parentNode.setAttribute('tabindex', '0'); art.parentNode.setAttribute('aria-label', 'View art full size');
     art.parentNode.onclick = () => zoomArt(art.src, id); art.parentNode.onkeydown = e => { if (e.key === 'Enter') zoomArt(art.src, id); }; }
   // phone back button / swipe returns to the map
-  if (history.state && history.state.rb) history.replaceState({ rb: id }, ''); else history.pushState({ rb: id }, '');
+  // opened from a link (family-tree/#strain): don't add a history step, so one Back returns to the page they came from
+  if (entry || (history.state && history.state.entry)) history.replaceState({ rb: id, entry: true }, '');
+  else if (history.state && history.state.rb) history.replaceState({ rb: id }, ''); else history.pushState({ rb: id }, '');
   panel.querySelectorAll('[data-go]').forEach(b => b.onclick = () => select(b.dataset.go));
   fit([...on]);
 }
-function close() { if (history.state && history.state.rb) history.back(); else clear(); }
+function close() { if (history.state && history.state.entry) { history.replaceState({ entry: true }, ''); clear(); } else if (history.state && history.state.rb) history.back(); else clear(); }
 addEventListener('popstate', () => { closeArt(); if (sel) clear(); });
 const lb = document.getElementById('lightbox');
 function zoomArt(src, name) { lb.querySelector('img').src = src; lb.querySelector('img').alt = name + ' art'; lb.querySelector('span').textContent = name; lb.hidden = false; }
@@ -515,8 +517,13 @@ q.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = res.quer
 applyView(); labels();
 const slug = n => String(n || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const fromHash = () => { const h = decodeURIComponent((location.hash || '').slice(1)).toLowerCase(); if (!h) return false;
-  const n = nodes.find(d => slug(d.id) === h); if (!n) return false; select(n.id); return true; };
+  const n = nodes.find(d => slug(d.id) === h); if (!n) return false; select(n.id, true); return true; };
 addEventListener('hashchange', fromHash);
+// "← Back" goes back to the page they came from on the site (one step, even after tapping around the map)
+const home = document.querySelector('.home');
+if (home && document.referrer) { try { const r = new URL(document.referrer);
+  if (r.origin === location.origin && !/family-tree/.test(r.pathname)) { home.textContent = '← Back';
+    home.onclick = e => { e.preventDefault(); history.go(history.state && history.state.rb && !history.state.entry ? -2 : -1); }; } } catch (e) {} }
 requestAnimationFrame(() => { if (!fromHash()) fit(null, 0); });
 addEventListener('resize', () => sel ? select(sel) : fit(null, 0));
 
