@@ -123,8 +123,115 @@ function capsToTitle_(t) {
       .replace(/#\s*([a-z0-9-]+)/gi, (m, v) => '#' + v.toUpperCase())
       .replace(/\s+/g, ' ').trim();
   }
+  // ---- Nov 5: data from an earlier day (the backup copy built into the site, if the live feed can't be reached)
+  // is re-dated against today, so the site never says "this week", "on shelves" or "harvest Oct 29" when that's past.
+  function dkey(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function plus(key, n) { var p = key.split('-'); return dkey(new Date(+p[0], +p[1] - 1, +p[2] + n)); }
+  function fresh(f, T) {
+    if (!f || !f.asOf || f.asOf >= T) return f;
+    var g = JSON.parse(JSON.stringify(f));
+    g.landing = (g.landing || []).filter(function (w) { return plus(w.week, 7) > T; });
+    g.landing.forEach(function (w) { w.thisWeek = w.week <= T; });
+    (g.lineup || []).forEach(function (x) {
+      if (x.next && x.next < T) { x.status = 'Harvested · ' + fmt(x.next); x.last = x.next; x.next = ''; x.inFlower = false; }
+      if (x.lastDelivered) x.onShelves = days(T, x.lastDelivered) <= 30;
+    });
+    (g.beta || []).forEach(function (b) {
+      var m = /^Harvest · ([A-Z][a-z]{2}) (\d+)/.exec(b.status || ''), mi = m ? MON.indexOf(m[1]) : -1;
+      if (mi < 0) return;
+      var y = +f.asOf.slice(0, 4), key = dkey(new Date(y, mi, +m[2]));
+      if (key < plus(f.asOf, -60)) key = dkey(new Date(y + 1, mi, +m[2]));
+      if (key < T) b.status = 'Harvested · ' + fmt(key);
+    });
+    var dates = (g.board || []).map(function (b) { return b; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var past = dates.filter(function (b) { return b.date < T; }), fut = dates.filter(function (b) { return b.date >= T; });
+    g.board = (past.length ? [past[past.length - 1]] : []).concat(fut.slice(0, 2));
+    g.board.forEach(function (b) { var i = fut.indexOf(b); b.label = i < 0 ? 'Last harvest' : i ? 'After that' : 'Next harvest'; b.next = i === 0; });
+    (g.shops || []).forEach(function (s) { if (s.next && s.next < T) { s.last = s.next; s.next = ''; } });
+    var H = g.hunts || {};
+    [].concat(H.hunting || [], H.back || []).forEach(function (h) { if (h.nextFlower && h.nextFlower < T) h.nextFlower = ''; });
+    return g;
+  }
+  // ---- Nov 5: the family tree picture (home + Beta), drawn from today's data every time the page loads ----
+  // Same look as the family tree's "today" view: the lineup, Beta Bud and the hunts, linked to their parents.
+  // Past Redbird strains are hollow rings, outside parents are small grey dots. Nothing to update by hand.
+  function constellation(f) {
+    var TC = { Indica: '#C4B5FD', Sativa: '#FCD34D', Hybrid: '#86EFAC' };
+    var k = function (s) { return String(s || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]/g, ''); };
+    var parents = function (g, self) { return String(g || '').split(/\s+(?:x|×|xo\.?)\s+/i)
+      .map(function (t) { return t.replace(/\s+(bx\d*|s\d|f\d)$/i, '').replace(/\s+\d+x\d+$/i, '').replace(/^\(|\)$/g, '').trim(); })
+      .filter(function (t) { return t && t.length < 40 && k(t) !== k(self); }); };
+    var pool = {}; POOL_KEYS.forEach(function (x) { pool[x] = 1; });
+    var nodes = [], by = {};
+    var add = function (x, o) { var key = k(x.name); if (!key || by[key]) return; var n = { id: x.name, kind: 'today', type: x.type, gen: x.genetics, kids: 0 };
+      for (var p in o) n[p] = o[p]; by[key] = n; nodes.push(n); };
+    (f.lineup || []).forEach(function (x) { add(x, { flower: !!x.inFlower }); });
+    (f.beta || []).forEach(function (b) { add(b, { flower: /^(harvest|in flower)/i.test(b.status || '') }); });
+    var H = f.hunts || {};
+    [].concat(H.hunting || [], H.back || []).forEach(function (h) { add(h, { hunt: true }); });
+    var links = [];
+    nodes.slice().forEach(function (c) {
+      parents(c.gen, c.id).forEach(function (p) {
+        var key = k(p), n = by[key];
+        if (!n) { n = { id: p, kind: pool[key] ? 'past' : 'outside', kids: 0 }; by[key] = n; nodes.push(n); }
+        if (n === c) return; n.kids++; links.push({ s: n, t: c, house: n.kind !== 'outside' });
+      });
+    });
+    var R = function (n) { return n.kind === 'today' ? 11 + Math.min(6, n.kids * 2) : n.kind === 'past' ? 6 : 3.5 + Math.min(3, (n.kids - 1) * 1.2); };
+    // a small force layout (no library): push apart, pull along family lines, drift to the middle
+    nodes.forEach(function (n, i) { var r = 10 * Math.sqrt(0.5 + i), a = i * Math.PI * (3 - Math.sqrt(5)); n.x = r * Math.cos(a); n.y = r * Math.sin(a); n.vx = n.vy = 0; n.r = R(n); });
+    var alpha = 1, i, j, a, b, dx, dy, l;
+    var box = function (n) { var hw = n.kind === 'outside' ? n.r + 2 : Math.max(n.r + 2, n.id.length * (n.kind === 'today' ? 3.7 : 3.1) + 4);
+      return [n.x - hw, n.y - n.r - 2, n.x + hw, n.y + n.r + (n.kind === 'outside' ? 2 : n.kind === 'today' ? 19 : 16)]; };
+    var unclash = function (k) {
+      for (i = 0; i < nodes.length; i++) for (j = i + 1; j < nodes.length; j++) {
+        a = box(nodes[i]); b = box(nodes[j]);
+        var ox = Math.min(a[2], b[2]) - Math.max(a[0], b[0]), oy = Math.min(a[3], b[3]) - Math.max(a[1], b[1]);
+        if (ox <= 0 || oy <= 0) continue;
+        var A = nodes[i], B = nodes[j];
+        if (ox < oy * 1.6) { var sx = (A.x < B.x ? -1 : 1) * ox * k / 2; A.x += sx; B.x -= sx; }
+        else { var sy = (A.y < B.y ? -1 : 1) * oy * k / 2; A.y += sy; B.y -= sy; }
+      }
+    };
+    for (var t = 0; t < 360; t++) {
+      for (i = 0; i < nodes.length; i++) { a = nodes[i];
+        for (j = 0; j < nodes.length; j++) { if (i === j) continue; b = nodes[j]; dx = b.x - a.x; dy = b.y - a.y; l = dx * dx + dy * dy || 1;
+          var st = b.kind === 'today' ? -320 : -110; if (l < 9e4) { a.vx += dx * st * alpha / l; a.vy += dy * st * alpha / l; }
+          var need = a.r + b.r + (a.kind === 'today' || b.kind === 'today' ? 26 : 12), d = Math.sqrt(l);
+          if (d < need) { var push = (need - d) / d * 0.35; a.vx -= dx * push; a.vy -= dy * push; } } }
+      links.forEach(function (e) { dx = e.t.x + e.t.vx - e.s.x - e.s.vx; dy = e.t.y + e.t.vy - e.s.y - e.s.vy; l = Math.sqrt(dx * dx + dy * dy) || 1;
+        var m = (l - (e.house ? 70 : 52)) / l * alpha * 0.7 / 2; e.t.vx -= dx * m; e.t.vy -= dy * m; e.s.vx += dx * m; e.s.vy += dy * m; });
+      nodes.forEach(function (n) { n.vx += -n.x * 0.03 * alpha; n.vy += -n.y * 0.055 * alpha; n.vx *= 0.6; n.vy *= 0.6; n.x += n.vx; n.y += n.vy; });
+      alpha += (0.001 - alpha) * 0.0228;
+      if (t > 150) unclash(0.5);
+    }
+    for (t = 0; t < 80; t++) unclash(0.5);
+    // fit into a 16:9 picture, room for the names
+    var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    nodes.forEach(function (n) { var w = n.kind === 'outside' ? n.r : Math.max(n.r, n.id.length * (n.kind === 'today' ? 3.9 : 3.3));
+      x0 = Math.min(x0, n.x - w); x1 = Math.max(x1, n.x + w); y0 = Math.min(y0, n.y - n.r - 4); y1 = Math.max(y1, n.y + n.r + 18); });
+    var W = 1000, Hh = 563, pad = 26, sc = Math.min((W - 2 * pad) / (x1 - x0), (Hh - 2 * pad) / (y1 - y0), 1.25);
+    var ox = W / 2 - (x0 + x1) / 2 * sc, oy = Hh / 2 - (y0 + y1) / 2 * sc, X = function (n) { return (n.x * sc + ox).toFixed(1); }, Y = function (n) { return (n.y * sc + oy).toFixed(1); };
+    var seed = 7, rnd = function () { return (seed = (seed * 9301 + 49297) % 233280) / 233280; }, stars = '';
+    for (i = 0; i < 90; i++) stars += '<circle cx="' + (rnd() * W).toFixed(0) + '" cy="' + (rnd() * Hh).toFixed(0) + '" r="' + (rnd() * 1.1 + 0.2).toFixed(1) + '" fill="#FFFFFF" opacity="' + (rnd() * 0.3 + 0.05).toFixed(2) + '"/>';
+    var out = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Today\'s Redbird strains and their parents" style="display: block; width: 100%; height: 100%; background: #0B0B10">' + stars +
+      links.map(function (e) { return '<line x1="' + X(e.s) + '" y1="' + Y(e.s) + '" x2="' + X(e.t) + '" y2="' + Y(e.t) + '" stroke="' + (e.house ? '#7A2433' : '#3B3947') + '" stroke-width="' + (e.house ? 1.6 : 1) + '"/>'; }).join('');
+    var txt = function (n, size, weight, color) { return '<text x="' + X(n) + '" y="' + (n.y * sc + oy + n.r * sc + size + 1).toFixed(1) + '" text-anchor="middle" font-family="\'DM Sans\', Helvetica, Arial, sans-serif" font-size="' + size + '" font-weight="' + weight + '" fill="' + color + '" stroke="#0B0B10" stroke-width="4" stroke-linejoin="round" paint-order="stroke">' + esc(n.id) + '</text>'; };
+    nodes.slice().sort(function (a, b) { return (a.kind === 'today') - (b.kind === 'today'); }).forEach(function (n) {
+      var r = (n.r * sc).toFixed(1);
+      if (n.kind === 'outside') { out += '<circle cx="' + X(n) + '" cy="' + Y(n) + '" r="' + r + '" fill="#6D6A7A" stroke="#0B0B10" stroke-width="1.5"/>'; return; }
+      if (n.kind === 'past') { out += '<circle cx="' + X(n) + '" cy="' + Y(n) + '" r="' + r + '" fill="#0B0B10" stroke="' + (TC[n.type] || '#B9B4C7') + '" stroke-width="2.2"/>' + txt(n, 11.5, 600, '#D9D6E2'); return; }
+      if (n.flower) out += '<circle cx="' + X(n) + '" cy="' + Y(n) + '" r="' + ((n.r + 9) * sc).toFixed(1) + '" fill="#C8102E" opacity="0.18"/>';
+      out += '<circle cx="' + X(n) + '" cy="' + Y(n) + '" r="' + r + '" fill="' + (TC[n.type] || TC.Hybrid) + '" stroke="' + (n.hunt ? '#FFFFFF' : '#0B0B10') + '" stroke-width="' + (n.hunt ? 1.6 : 2) + '"' + (n.hunt ? ' stroke-dasharray="2.5 2.5"' : '') + '/>' + txt(n, 13, 700, '#FFFFFF');
+    });
+    return out + '</svg>';
+  }
   function view(f) {
+    f = fresh(f, dkey(new Date()));
     var V = {}, lineup = f.lineup || [], beta = f.beta || [], shops = f.shops || [], land = f.landing || [];
+    // Nov 5: years that roll over on their own (footer, "11 years of genetics")
+    var Y = new Date().getFullYear(); V.__RB_YEAR__ = String(Y); V.__RB_GEN_YEARS__ = Math.floor((Y - 2015) / 5) * 5 + '+';   // 10+ until 2030, then 15+, 20+ in 2035 ...
+    V.__RB_CONST__ = constellation(f);
     var year = (f.asOf || '').slice(0, 4), TYPE = {};
     lineup.forEach(function (x) { TYPE[x.name] = x.type; });
     beta.forEach(function (b) { if (!TYPE[b.name]) TYPE[b.name] = b.type; });
@@ -343,7 +450,7 @@ function capsToTitle_(t) {
 
 // ---- page loader (launch site): renders this page full-screen, makes the site's links real page addresses
 (function () {
-  var ROUTES = {"Main": "", "Flower": "products/", "Micro": "micro-buds/", "Prerolls": "pre-rolls/", "Rosin": "rosin/", "BetaBud": "beta-bud/", "Strains": "strains/", "Beta": "beta/", "Drops": "drops/", "Contact": "contact/", "Retailers": "for-retailers/", "Merch": "merch/", "Privacy": "privacy/", "FamilyTree": "family-tree/"}, EXT = {"03d29e78303843e54f682d3361b0d3ea": ".png", "043188f1eee37d7eb0e0e27eee97586f": ".jpg", "06ad090d00b3f4f46d30b8ea1978c54e": ".jpg", "0738830b9067a69f8796f031dd25afbd": ".jpg", "0cbf7643b72e6108a19fdcc5f2c9b4d6": ".jpg", "132796e63831fad6d11dba73152beda6": ".jpg", "15640f779c4069462a5b5f29eb98d66e": ".jpg", "15e67d4f82bb144f39c0a27b7d18a2e5": ".jpg", "186e35dcb739a15a6a58be91a24ac455": ".svg", "1ee7eb0d5db8b9478ce1cf68070bb021": ".jpg", "20c342c1f3c69de37d67387597859ddb": ".jpg", "23060bd9b70d6c3d11ab6ce93714964b": ".jpg", "295c326cd260b7386f629ae916ef43cb": ".jpg", "2bfd47c91a576e2ab9b42719b8fb74fa": ".jpg", "2ce4af0b8805c8c8af7fded2a31c7ba8": ".jpg", "2d2cbfe251741a88fc1c770cc7dc3339": ".jpg", "2eb60ac11ca164d7e0dab8ff2cf524bf": ".jpg", "3dec7ebd4013b49d0ce995925b8c4130": ".jpg", "41dc519780ca5fcd51c11d318d72b66b": ".jpg", "4bb5b8a779d339cae2a36896e3e42b99": ".jpg", "517cb767c0663d3cf690454bfa1a262d": ".jpg", "52ebf00d29f2f2b3b918a26a1f59aa47": ".jpg", "55c03ec5783fb05730a0aeb034e288d6": ".jpg", "59c3ca3b24e0c7c42577d269ec5e8272": ".jpg", "5ef53581986f3ec5c33d5aadc2d4361a": ".jpg", "605c396932dc4fa9c4519bd76d815dba": ".jpg", "65aebe901c38dfdaa9a04c3c0ef48844": ".jpg", "69e4e9bde2260f3e3647ea568482a2e0": ".jpg", "6bc65e175de5207a6f116c1f7fef1b7e": ".jpg", "6dbd1d2fb7040ac9361ee9b1f2013ecf": ".png", "70a6b4c28b3f104b722d485dc25f2f43": ".jpg", "72810907117480d4847f7c8d823998f7": ".jpg", "73d7d87956502547922c50a6b7027955": ".jpg", "766fdc4cacda02beaf14c0a5a0340bab": ".jpg", "7e1ca02e9e655453528a7e0a07c9ef60": ".jpg", "7f60fe23e81460089b9fdc581b8d44f1": ".jpg", "84fd4ce8efbf883066caa6154d4e2f5f": ".jpg", "8679f9a12d6663a5512bcbb9bdf0a3a4": ".jpg", "8692cad7106c55c853c9a07857738b27": ".jpg", "8847af0325eec77ac80f3da9cba9e92f": ".jpg", "8bc43d12db91f820304d85530db7e863": ".png", "8ec650b55a098a5c44089b9071246aca": ".jpg", "9805a8fcb065e0a559d8fa91284ea2b7": ".jpg", "9ac41e6985e1f5b9165d01c9fe8c3201": ".jpg", "9bb9552e86b9c975e6c73f675008260b": ".jpg", "9ca56d3b9a154088a5cc2cbb5c4db1f0": ".jpg", "9cd87626a5734eb105bf6dd5366b3c20": ".jpg", "9ddcfff3a2d0be8dd3760280bcad8747": ".jpg", "a451498d6838b183a4f9fc9eddb8fc52": ".jpg", "ac615debb55668bc0e4d6281aab19ffd": ".jpg", "ac9990bb1986fe06cd45df62406b4df0": ".jpg", "b4243d3abc26e10ddd064a1d7e5396d7": ".jpg", "b59992f64029d5bb28554590dd31dee1": ".jpg", "bc81b83f9d13cb90598a5d0cc4260b4b": ".jpg", "be3512b1abd0de6963fdce8fae727c0d": ".jpg", "c1827be414c190bc9faa7f53344faef9": ".jpg", "c360172ab6633db66ced5454db9e7576": ".jpg", "c797ce8ed866f5e8ed7b187386c68c19": ".jpg", "c8b828b21e21d4a9887f59a0b1515635": ".jpg", "c93b16e909d9aa7d1a8d52cf92a4392d": ".jpg", "cb43eef5615aba4e02c6fe8914115b25": ".png", "cbbe4f8756e23f1ac6dacbada20104f2": ".jpg", "d286aedd7ba44d61146479321a3570d6": ".jpg", "d3cae31e51cb393dc5c1b9cfba915967": ".jpg", "d3dee74162e088a887ac2366092906ba": ".jpg", "d50ed4284b2e4c0a25f05949fbfc008b": ".jpg", "d8250ce26d0b51e41f702f2e5334b9b3": ".jpg", "d8c84fe88647ee1caa9a3b0ccf846118": ".jpg", "d9751f28c31c1251820668b9d00c9c1f": ".jpg", "df3b0080d953a92572d8b0867cb903e7": ".jpg", "e0179ef06f9e30bfdce87f6d1ce533a9": ".jpg", "e1a33541d9fd906bb00065334e875d1f": ".jpg", "e25537bf9a992199aec634863facde09": ".jpg", "e39f064011eb67bbaf7412d693485d66": ".jpg", "e3c029787746d07f7ac7aabb57e33d83": ".svg", "e4107d0ba72687770912e169ae9aceaf": ".jpg", "e4571f6f6dfd10cf6483e349d017eac3": ".jpg", "e46a0e92071863b4754503a664487dfe": ".jpg", "e49d1b5e40db214892c6c1d22600533f": ".jpg", "e78fcf9b838e0064d7a2ed9e43bcdcbe": ".jpg", "e7f44943168d84dbd124133213875f56": ".jpg", "eafc81cb67a61a4798c25f35bbbc7947": ".jpg", "f5a2ce0d8ba0a7dce2bad1f6fff8d258": ".jpg", "f5ac0703bc9c56c15a91173cb96688e9": ".jpg", "f605d418d4eb51a0e41dc6caa17d6faa": ".jpg", "fb51360df795737c82343b31032bfd1a": ".jpg", "ffe25afa48f5e850f4b8b7ab383cebec": ".jpg"}, V = 'e26c18b4d9';
+  var ROUTES = {"Main": "", "Flower": "products/", "Micro": "micro-buds/", "Prerolls": "pre-rolls/", "Rosin": "rosin/", "BetaBud": "beta-bud/", "Strains": "strains/", "Beta": "beta/", "Drops": "drops/", "Contact": "contact/", "Retailers": "for-retailers/", "Merch": "merch/", "Privacy": "privacy/", "FamilyTree": "family-tree/"}, EXT = {"03d29e78303843e54f682d3361b0d3ea": ".png", "043188f1eee37d7eb0e0e27eee97586f": ".jpg", "06ad090d00b3f4f46d30b8ea1978c54e": ".jpg", "0738830b9067a69f8796f031dd25afbd": ".jpg", "0cbf7643b72e6108a19fdcc5f2c9b4d6": ".jpg", "132796e63831fad6d11dba73152beda6": ".jpg", "15640f779c4069462a5b5f29eb98d66e": ".jpg", "15e67d4f82bb144f39c0a27b7d18a2e5": ".jpg", "186e35dcb739a15a6a58be91a24ac455": ".svg", "1ee7eb0d5db8b9478ce1cf68070bb021": ".jpg", "20c342c1f3c69de37d67387597859ddb": ".jpg", "23060bd9b70d6c3d11ab6ce93714964b": ".jpg", "295c326cd260b7386f629ae916ef43cb": ".jpg", "2bfd47c91a576e2ab9b42719b8fb74fa": ".jpg", "2ce4af0b8805c8c8af7fded2a31c7ba8": ".jpg", "2d2cbfe251741a88fc1c770cc7dc3339": ".jpg", "2eb60ac11ca164d7e0dab8ff2cf524bf": ".jpg", "3dec7ebd4013b49d0ce995925b8c4130": ".jpg", "41dc519780ca5fcd51c11d318d72b66b": ".jpg", "4bb5b8a779d339cae2a36896e3e42b99": ".jpg", "517cb767c0663d3cf690454bfa1a262d": ".jpg", "52ebf00d29f2f2b3b918a26a1f59aa47": ".jpg", "55c03ec5783fb05730a0aeb034e288d6": ".jpg", "59c3ca3b24e0c7c42577d269ec5e8272": ".jpg", "5ef53581986f3ec5c33d5aadc2d4361a": ".jpg", "605c396932dc4fa9c4519bd76d815dba": ".jpg", "65aebe901c38dfdaa9a04c3c0ef48844": ".jpg", "69e4e9bde2260f3e3647ea568482a2e0": ".jpg", "6bc65e175de5207a6f116c1f7fef1b7e": ".jpg", "6dbd1d2fb7040ac9361ee9b1f2013ecf": ".png", "70a6b4c28b3f104b722d485dc25f2f43": ".jpg", "72810907117480d4847f7c8d823998f7": ".jpg", "766fdc4cacda02beaf14c0a5a0340bab": ".jpg", "7e1ca02e9e655453528a7e0a07c9ef60": ".jpg", "7f60fe23e81460089b9fdc581b8d44f1": ".jpg", "84fd4ce8efbf883066caa6154d4e2f5f": ".jpg", "8679f9a12d6663a5512bcbb9bdf0a3a4": ".jpg", "8692cad7106c55c853c9a07857738b27": ".jpg", "8847af0325eec77ac80f3da9cba9e92f": ".jpg", "8bc43d12db91f820304d85530db7e863": ".png", "8ec650b55a098a5c44089b9071246aca": ".jpg", "9805a8fcb065e0a559d8fa91284ea2b7": ".jpg", "9ac41e6985e1f5b9165d01c9fe8c3201": ".jpg", "9bb9552e86b9c975e6c73f675008260b": ".jpg", "9ca56d3b9a154088a5cc2cbb5c4db1f0": ".jpg", "9cd87626a5734eb105bf6dd5366b3c20": ".jpg", "9ddcfff3a2d0be8dd3760280bcad8747": ".jpg", "a451498d6838b183a4f9fc9eddb8fc52": ".jpg", "ac615debb55668bc0e4d6281aab19ffd": ".jpg", "ac9990bb1986fe06cd45df62406b4df0": ".jpg", "b4243d3abc26e10ddd064a1d7e5396d7": ".jpg", "b59992f64029d5bb28554590dd31dee1": ".jpg", "bc81b83f9d13cb90598a5d0cc4260b4b": ".jpg", "be3512b1abd0de6963fdce8fae727c0d": ".jpg", "c1827be414c190bc9faa7f53344faef9": ".jpg", "c360172ab6633db66ced5454db9e7576": ".jpg", "c797ce8ed866f5e8ed7b187386c68c19": ".jpg", "c8b828b21e21d4a9887f59a0b1515635": ".jpg", "c93b16e909d9aa7d1a8d52cf92a4392d": ".jpg", "cb43eef5615aba4e02c6fe8914115b25": ".png", "cbbe4f8756e23f1ac6dacbada20104f2": ".jpg", "d286aedd7ba44d61146479321a3570d6": ".jpg", "d3cae31e51cb393dc5c1b9cfba915967": ".jpg", "d3dee74162e088a887ac2366092906ba": ".jpg", "d50ed4284b2e4c0a25f05949fbfc008b": ".jpg", "d8250ce26d0b51e41f702f2e5334b9b3": ".jpg", "d8c84fe88647ee1caa9a3b0ccf846118": ".jpg", "d9751f28c31c1251820668b9d00c9c1f": ".jpg", "df3b0080d953a92572d8b0867cb903e7": ".jpg", "e0179ef06f9e30bfdce87f6d1ce533a9": ".jpg", "e1a33541d9fd906bb00065334e875d1f": ".jpg", "e25537bf9a992199aec634863facde09": ".jpg", "e39f064011eb67bbaf7412d693485d66": ".jpg", "e3c029787746d07f7ac7aabb57e33d83": ".svg", "e4107d0ba72687770912e169ae9aceaf": ".jpg", "e4571f6f6dfd10cf6483e349d017eac3": ".jpg", "e46a0e92071863b4754503a664487dfe": ".jpg", "e49d1b5e40db214892c6c1d22600533f": ".jpg", "e78fcf9b838e0064d7a2ed9e43bcdcbe": ".jpg", "e7f44943168d84dbd124133213875f56": ".jpg", "eafc81cb67a61a4798c25f35bbbc7947": ".jpg", "f5a2ce0d8ba0a7dce2bad1f6fff8d258": ".jpg", "f5ac0703bc9c56c15a91173cb96688e9": ".jpg", "f605d418d4eb51a0e41dc6caa17d6faa": ".jpg", "fb51360df795737c82343b31032bfd1a": ".jpg", "ffe25afa48f5e850f4b8b7ab383cebec": ".jpg"}, V = '182f69cc00';
   var HASH = { home: 'Main', products: 'Flower', micro: 'Micro', prerolls: 'Prerolls', rosin: 'Rosin', betabud: 'BetaBud', strains: 'Strains', beta: 'Beta',
                drops: 'Drops', contact: 'Contact', retailers: 'Retailers', merch: 'Merch' };
   window.RB_BOOT = function (name, P) {
