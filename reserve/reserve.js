@@ -319,7 +319,7 @@
     var html = '<button type="button" class="rbp-back" data-act="browse">← Back to all weeks</button>';
     if (S.editing && S.submitted) {
       var keep = S.submitted.reservation.items.filter(function (i) { return i.locked; }).concat(S.extra || []);
-      if (keep.length) html += '<p class="rbp-fine" style="margin:0 0 10px">These stay as reserved: weeks within 14 days of delivery are locked in, and strains no longer on the menu can\u2019t be changed here.</p><div class="rbp-weeks" style="margin-bottom:12px">' + resItemsHtml(keep) + '</div>';
+      if (keep.length) html += '<p class="rbp-fine" style="margin:0 0 10px">These stay as reserved: weeks within 14 days are locked in, and strains no longer on the menu can\u2019t be changed here.</p><div class="rbp-weeks" style="margin-bottom:12px">' + resItemsHtml(keep) + '</div>';
     }
     if (!weeks.length && !(S.editing && S.extra && S.extra.length)) return html + '<section class="rbp-card"><div class="rbp-empty">Nothing added yet. <button type="button" class="rbp-textlink" data-act="browse">Pick a week</button></div></section>';
     html += '<div class="rbp-weeks">';
@@ -366,7 +366,7 @@
   function done() {
     var o = S.submitted, r = o.reservation, changeable = r.items.some(function (i) { return !i.locked; });
     var head = o.viewing ? esc(r.id) : o.updated ? 'Updated ' + esc(r.id) : 'Thanks, ' + esc(S.who.account);
-    var sub = o.viewing ? (changeable ? 'Weeks 14+ days out can still be changed.' : 'Every week is within 14 days of delivery, so this one is locked in.')
+    var sub = o.viewing ? (changeable ? 'Weeks 14 or more days out can still be changed.' : 'Every week is within 14 days, so this one is locked in.')
       : 'Reservation ' + esc(r.id) + (r.email ? ' · a copy is on its way to ' + esc(r.email) : '');
     var html = '<div class="rbp-weeks"><section class="rbp-card"><div style="display:flex;gap:14px;align-items:center"><div class="rbp-check">' + (o.viewing ? '#' : '\u2713') + '</div><div><div class="rbp-bebas" style="font-size:30px;line-height:1">' + head + '</div>' +
       '<div class="rbp-meta">' + sub + '</div></div></div></section>';
@@ -374,7 +374,7 @@
     html += '<section class="rbp-card rbp-rcard"><div class="rbp-totals"><div class="rbp-grand" style="border:0;margin:0;padding:0"><span>Total · ' + plural(r.units, 'unit') + '</span><span class="rbp-bebas">' + money(r.total) + '</span></div></div></section>';
     if (r.notes) html += '<section class="rbp-card rbp-notes"><label>Order notes</label><p style="margin:0;white-space:pre-wrap">' + esc(r.notes) + '</p></section>';
     html += (changeable ? '<div class="rbp-actions"><button type="button" class="rbp-btn" data-act="edit">Change reservation</button><button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button></div>' +
-      '<p class="rbp-fine">You can change or cancel each week until 14 days before it delivers. After that it\u2019s locked in; reply to your confirmation email or call your rep.</p>' : '') +
+      '<p class="rbp-fine">You can change or cancel each week until 14 days before that week. After that it\u2019s locked in; reply to your confirmation email or call your rep.</p>' : '') +
       (S.err ? '<div class="rbp-msg err" role="alert">' + esc(S.err) + '</div>' : '') +
       '<p class="rbp-fine"><button type="button" class="rbp-textlink" data-act="new">Start a new reservation</button></p></div>';
     return html;
@@ -382,7 +382,7 @@
 
   function cancelled() {
     var r = S.submitted && S.submitted.reservation, kept = r ? r.items : [];
-    return '<section class="rbp-card"><div class="rbp-empty">' + (kept.length ? 'We released the weeks you could still change. The weeks below are within 14 days of delivery and stay reserved.' : 'Reservation ' + esc(r ? r.id : '') + ' is cancelled and the amounts were released.') +
+    return '<section class="rbp-card"><div class="rbp-empty">' + (kept.length ? 'We released the weeks you could still change. The weeks below are within 14 days and stay reserved.' : 'Reservation ' + esc(r ? r.id : '') + ' is cancelled and the amounts were released.') +
       '<div style="margin-top:16px"><button type="button" class="rbp-btn" data-act="new">Start a new reservation</button></div></div></section>' + (kept.length ? '<div class="rbp-weeks" style="margin-top:12px">' + resItemsHtml(kept) + '</div>' : '');
   }
 
@@ -544,7 +544,7 @@
     return items;
   }
   var ERR = {
-    locked: 'Those weeks are within 14 days of delivery now, so they\u2019re locked in. Reply to your confirmation email or call your rep.',
+    locked: 'Those weeks are within 14 days now, so they\u2019re locked in. Reply to your confirmation email or call your rep.',
     cancelled: 'This reservation was already cancelled.',
     not_found: 'We couldn\u2019t find that reservation. Use the link in your latest confirmation email.',
     empty: 'Those strains aren\u2019t on the menu for that week anymore. Go back and pick again.',
