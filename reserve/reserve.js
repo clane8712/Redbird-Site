@@ -10,8 +10,7 @@
   'use strict';
 
   var CFG = Object.assign({
-    PORTAL_API: 'https://script.google.com/macros/s/AKfycbxleeQ3JUPYfYr1VZl_Ac_ata1Qt8sjY_I9SsanvVf2Zy07jn_daHUQbet3PPL_bGVJaw/exec',   // Chris's Portal.gs
-    CRM_API: 'https://script.google.com/macros/s/AKfycbyR-wEn91NXeuciv9q6AIFVWNnJynVzZJiKpoO7tDgPcQXTQtCRWszURRd0UJ0xXyzT_g/exec'   // Josh's CRM script
+    PORTAL_API: 'https://script.google.com/macros/s/AKfycbxleeQ3JUPYfYr1VZl_Ac_ata1Qt8sjY_I9SsanvVf2Zy07jn_daHUQbet3PPL_bGVJaw/exec'   // Chris's Portal.gs: everything goes through here
   }, window.RB_PORTAL_CFG || {});
 
   // Prices from the current portal; steps are Scott's case sizes (Nov 13).
@@ -39,7 +38,7 @@
     teaser: null, weeks: [], err: '',
     who: { name: '', email: '', account: '' }, accounts: [], internal: false,
     cart: {}, carts: {}, open: {}, sizes: {}, q: '', month: '',
-    submitted: null, editing: false, notes: '', busy: false, menu: false, formStart: 0
+    submitted: null, editing: false, extra: [], notes: '', busy: false, menu: false, formStart: 0, mine: [], sentLink: {}
   };
 
   // ───────── helpers ─────────
@@ -131,6 +130,7 @@
     else html += main(browse(), '', totals().u > 0) + bar();
     root.innerHTML = html;
     if (S.mode === 'in' && S.screen === 'browse') spy();
+    root.querySelectorAll('.rbp-lock').forEach(function (x) { x.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focusGate(); } }; });
 
   }
   function main(inner, cls, hasBar) { return '<main class="rbp-main' + (cls ? ' ' + cls : '') + (hasBar ? ' has-bar' : '') + '">' + inner + '</main>'; }
@@ -139,7 +139,8 @@
     var title = 'Reserve upcoming harvests', sub;
     if (S.mode !== 'in') sub = 'Licensed Washington retailers can see what’s coming off the line each week and reserve it before it hits the menu.';
     else if (S.screen === 'review') { title = S.editing ? 'Edit your reservation' : 'Review your reservation'; sub = 'Check quantities, add a note if you need to, then send it to the Redbird team.'; }
-    else if (S.screen === 'done') { title = 'Reservation sent'; sub = 'The Redbird team has it. We’ll be in touch to confirm delivery details.'; }
+    else if (S.screen === 'done' && S.submitted && S.submitted.viewing) { title = 'Your reservation'; sub = 'Change amounts or cancel any week that\u2019s still 14 or more days out.'; }
+    else if (S.screen === 'done') { title = S.submitted && S.submitted.updated ? 'Changes saved' : 'Reservation sent'; sub = 'The Redbird team has it. We’ll be in touch to confirm delivery details.'; }
     else if (S.screen === 'cancelled') { title = 'Reservation cancelled'; sub = 'Your reserved quantities have been released.'; }
     else sub = 'Pick a delivery week and add what you want to reserve. Buttons add by the case; you can type any number.';
     var who = '';
@@ -220,17 +221,17 @@
   // ── signed out ──
   function signedOut() {
     var weeks = (S.teaser && S.teaser.weeks) || [];
-    var html = legend();
+    var html = weeks.length ? tools(weeks, true) : legend();
     if (!weeks.length) return html + (S.teaser ? '<section class="rbp-card"><div class="rbp-empty">New weeks are posted as harvests get scheduled. Check back soon.</div></section>' : '');
     var w1 = weeks[0], w2 = weeks[1];
     html += '<div class="rbp-weeks">';
-    html += '<section class="rbp-card">' + weekHead(w1, { out: true }) + grid(w1, visible(w1), true) + '<div class="rbp-note">Sign in to see pricing and reserve this week.</div></section>';
-    if (w2) html += '<div class="rbp-fade" aria-hidden="true"><section class="rbp-card">' + weekHead(w2, { out: true }) + grid(w2, visible(w2), true) + '</section></div>';
+    html += '<section class="rbp-card rbp-out" data-act="locked">' + weekHead(w1, { out: true }) + grid(w1, visible(w1), true) + '<div class="rbp-note">Sign in to see pricing and reserve this week.</div></section>';
+    if (w2) html += '<div class="rbp-fade" aria-hidden="true"><section class="rbp-card rbp-out" data-act="locked">' + weekHead(w2, { out: true }) + grid(w2, visible(w2), true) + '</section></div>';
     html += '</div>';
     var rest = weeks.slice(w2 ? 2 : 1);
     if (rest.length) {
       html += '<div class="rbp-later"><div class="rbp-mono">Also coming up</div>' + rest.map(function (w) {
-        return '<div class="rbp-lock"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + tag(w.status) + '<span class="rbp-meta">' + types(w).join(' · ') + '</span></div>' + LOCK_SVG + '</div>';
+        return '<div class="rbp-lock" data-act="locked" role="button" tabindex="0"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + tag(w.status) + '<span class="rbp-meta">' + types(w).join(' · ') + '</span></div>' + LOCK_SVG + '</div>';
       }).join('') + '</div>';
     }
     return html;
@@ -264,21 +265,28 @@
     return c + '</div>';
   }
 
-  // ── signed in: browse ──
-  function browse() {
-    if (!S.weeks.length) return legend() + '<section class="rbp-card"><div class="rbp-empty">Nothing is open for reservations right now. New weeks are posted as harvests get scheduled, so check back soon.</div></section>';
-    var html = '<div class="rbp-tools"><input class="rbp-search" type="search" placeholder="Search strains" aria-label="Search strains" value="' + esc(S.q) + '" data-act="search">';
+  // Search, size chips and month tabs. Signed out they look the same but every click goes to the sign-in card.
+  function tools(weeks, locked) {
+    var L = locked ? ' data-act="locked"' : '';
+    var html = '<div class="rbp-tools"><input class="rbp-search" type="search" placeholder="Search strains" aria-label="Search strains" value="' + (locked ? '' : esc(S.q)) + '"' + (locked ? ' readonly data-act="locked"' : ' data-act="search"') + '>';
     html += CHIPS.map(function (g) {
       return '<div class="rbp-chipgroup"><span class="rbp-mono">' + g[0] + '</span>' + g[1].map(function (k) {
-        return '<button type="button" class="rbp-chip' + (S.sizes[k] ? ' on' : '') + '" data-act="size" data-k="' + k + '" aria-pressed="' + !!S.sizes[k] + '">' + SIZE[k].col + '</button>';
+        var on = !locked && S.sizes[k];
+        return '<button type="button" class="rbp-chip' + (on ? ' on' : '') + '"' + (L || ' data-act="size" data-k="' + k + '"') + ' aria-pressed="' + !!on + '">' + SIZE[k].col + '</button>';
       }).join('') + '</div>';
     }).join('<span class="rbp-sep"></span>');
-    if (S.q || Object.keys(S.sizes).some(function (k) { return S.sizes[k]; })) html += '<button type="button" class="rbp-clear" data-act="clear">Clear</button>';
+    if (!locked && (S.q || Object.keys(S.sizes).some(function (k) { return S.sizes[k]; }))) html += '<button type="button" class="rbp-clear" data-act="clear">Clear</button>';
     html += '</div>';
     var months = [];
-    S.weeks.forEach(function (w) { var m = monthOf(w.d); if (months.indexOf(m) < 0) months.push(m); });
-    if (!phone() && months.length > 1) html += '<div class="rbp-months">' + months.map(function (m, i) { return '<button type="button" class="rbp-month' + ((S.month || months[0]) === m ? ' on' : '') + '" data-act="month" data-m="' + m + '">' + m + '</button>'; }).join('') + '</div>';
-    html += legend();
+    weeks.forEach(function (w) { var m = monthOf(w.d); if (months.indexOf(m) < 0) months.push(m); });
+    if (!phone() && months.length > 1) html += '<div class="rbp-months">' + months.map(function (m, i) { return '<button type="button" class="rbp-month' + ((locked ? months[0] : (S.month || months[0])) === m ? ' on' : '') + '"' + (L || ' data-act="month" data-m="' + m + '"') + '>' + m + '</button>'; }).join('') + '</div>';
+    return html + legend();
+  }
+
+  // ── signed in: browse ──
+  function browse() {
+    if (!S.weeks.length) return mineList() + legend() + '<section class="rbp-card"><div class="rbp-empty">Nothing is open for reservations right now. New weeks are posted as harvests get scheduled, so check back soon.</div></section>';
+    var html = mineList() + tools(S.weeks, false);
     var cards = S.weeks.map(function (w) {
       var v = visible(w);
       if (!v.flower && !v.pre) return '';
@@ -287,6 +295,16 @@
     }).join('');
     html += '<div class="rbp-weeks">' + (cards || '<section class="rbp-card"><div class="rbp-empty">No strains match. <button type="button" class="rbp-textlink" data-act="clear">Clear filters</button></div></section>') + '</div>';
     return html;
+  }
+
+  function mineList() {
+    var list = S.mine || [];
+    if (!list.length) return '';
+    return '<section class="rbp-mine"><div class="rbp-mono">Your reservations</div>' + list.map(function (r) {
+      var sent = S.sentLink[r.id];
+      return '<div class="rbp-mine-row"><div><b>' + esc(r.id) + '</b><span class="rbp-meta">' + (S.accounts.length > 1 ? esc(r.store) + ' · ' : '') + 'Week' + (r.weeks.length > 1 ? 's' : '') + ' of ' + r.weeks.map(shortDate).join(', ') + ' · ' + plural(r.units, 'unit') + ' · ' + money(r.total) + '</span></div>' +
+        (r.changeable ? (sent ? '<span class="rbp-meta">Link sent to ' + esc(sent) + '</span>' : '<button type="button" class="rbp-textlink" data-act="resend" data-id="' + esc(r.id) + '">Email me the link to change it</button>') : '<span class="rbp-meta">Locked in</span>') + '</div>';
+    }).join('') + '</section>';
   }
 
   function bar() {
@@ -299,7 +317,11 @@
   function review() {
     var weeks = cartWeeks();
     var html = '<button type="button" class="rbp-back" data-act="browse">← Back to all weeks</button>';
-    if (!weeks.length) return html + '<section class="rbp-card"><div class="rbp-empty">Nothing added yet. <button type="button" class="rbp-textlink" data-act="browse">Pick a week</button></div></section>';
+    if (S.editing && S.submitted) {
+      var keep = S.submitted.reservation.items.filter(function (i) { return i.locked; }).concat(S.extra || []);
+      if (keep.length) html += '<p class="rbp-fine" style="margin:0 0 10px">These stay as reserved: weeks within 14 days of delivery are locked in, and strains no longer on the menu can\u2019t be changed here.</p><div class="rbp-weeks" style="margin-bottom:12px">' + resItemsHtml(keep) + '</div>';
+    }
+    if (!weeks.length && !(S.editing && S.extra && S.extra.length)) return html + '<section class="rbp-card"><div class="rbp-empty">Nothing added yet. <button type="button" class="rbp-textlink" data-act="browse">Pick a week</button></div></section>';
     html += '<div class="rbp-weeks">';
     weeks.forEach(function (w) {
       var id = wid(w), c = S.cart[id], t = weekTotals(id);
@@ -328,23 +350,40 @@
     return html + '</div>';
   }
 
+  function resWeeks(items) {
+    var by = {}, order = [];
+    items.forEach(function (i) { if (!by[i.week]) { by[i.week] = []; order.push(i.week); } by[i.week].push(i); });
+    return order.map(function (d) { return { d: d, items: by[d], total: by[d].reduce(function (s, i) { return s + i.lineTotal; }, 0), units: by[d].reduce(function (s, i) { return s + i.qty; }, 0) }; });
+  }
+  function resItemsHtml(items, note) {
+    return resWeeks(items).map(function (w) {
+      return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span><small>Delivers ' + longDate(w.d) + (w.items[0].locked ? ' · locked in' : '') + '</small></div>' + (note || '') + '</div>' +
+        w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.size) + ' · ' + it.qty + ' × ' + money(it.unitPrice) + '</div></div><span class="rbp-line">' + money(it.lineTotal) + '</span></div>'; }).join('') +
+        '<div class="rbp-sub"><span>Week subtotal · ' + plural(w.units, 'unit') + '</span><b>' + money(w.total) + '</b></div></section>';
+    }).join('');
+  }
+
   function done() {
-    var o = S.submitted;
-    var html = '<div class="rbp-weeks"><section class="rbp-card"><div style="display:flex;gap:14px;align-items:center"><div class="rbp-check">✓</div><div><div class="rbp-bebas" style="font-size:30px;line-height:1">' + (o.updated ? 'Changes saved' : 'Thanks, ' + esc(S.who.account)) + '</div>' +
-      '<div class="rbp-meta">Reservation ' + esc(o.id) + (S.who.email ? ' · a copy is on its way to ' + esc(S.who.email) : '') + '</div></div></div></section>';
-    o.weeks.forEach(function (w) {
-      html += '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span><small>Delivers ' + longDate(w.d) + '</small></div></div>' +
-        w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.productSize) + ' · qty ' + it.qty + '</div></div><span class="rbp-line">' + money(it.lineTotal) + '</span></div>'; }).join('') +
-        '<div class="rbp-sub"><span>Week subtotal</span><b>' + money(w.total) + '</b></div></section>';
-    });
-    html += '<section class="rbp-card rbp-rcard"><div class="rbp-totals"><div class="rbp-grand" style="border:0;margin:0;padding:0"><span>Total</span><span class="rbp-bebas">' + money(o.total) + '</span></div></div></section>';
-    html += '<div class="rbp-actions"><button type="button" class="rbp-btn" data-act="edit">Edit reservation</button><button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button></div>' +
+    var o = S.submitted, r = o.reservation, changeable = r.items.some(function (i) { return !i.locked; });
+    var head = o.viewing ? esc(r.id) : o.updated ? 'Updated ' + esc(r.id) : 'Thanks, ' + esc(S.who.account);
+    var sub = o.viewing ? (changeable ? 'Weeks 14+ days out can still be changed.' : 'Every week is within 14 days of delivery, so this one is locked in.')
+      : 'Reservation ' + esc(r.id) + (r.email ? ' · a copy is on its way to ' + esc(r.email) : '');
+    var html = '<div class="rbp-weeks"><section class="rbp-card"><div style="display:flex;gap:14px;align-items:center"><div class="rbp-check">' + (o.viewing ? '#' : '\u2713') + '</div><div><div class="rbp-bebas" style="font-size:30px;line-height:1">' + head + '</div>' +
+      '<div class="rbp-meta">' + sub + '</div></div></div></section>';
+    html += resItemsHtml(r.items);
+    html += '<section class="rbp-card rbp-rcard"><div class="rbp-totals"><div class="rbp-grand" style="border:0;margin:0;padding:0"><span>Total · ' + plural(r.units, 'unit') + '</span><span class="rbp-bebas">' + money(r.total) + '</span></div></div></section>';
+    if (r.notes) html += '<section class="rbp-card rbp-notes"><label>Order notes</label><p style="margin:0;white-space:pre-wrap">' + esc(r.notes) + '</p></section>';
+    html += (changeable ? '<div class="rbp-actions"><button type="button" class="rbp-btn" data-act="edit">Change reservation</button><button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button></div>' +
+      '<p class="rbp-fine">You can change or cancel each week until 14 days before it delivers. After that it\u2019s locked in; reply to your confirmation email or call your rep.</p>' : '') +
+      (S.err ? '<div class="rbp-msg err" role="alert">' + esc(S.err) + '</div>' : '') +
       '<p class="rbp-fine"><button type="button" class="rbp-textlink" data-act="new">Start a new reservation</button></p></div>';
     return html;
   }
 
   function cancelled() {
-    return '<section class="rbp-card"><div class="rbp-empty">Reservation ' + esc((S.submitted || {}).id || '') + ' is cancelled.<div style="margin-top:16px"><button type="button" class="rbp-btn" data-act="new">Start a new reservation</button></div></div></section>';
+    var r = S.submitted && S.submitted.reservation, kept = r ? r.items : [];
+    return '<section class="rbp-card"><div class="rbp-empty">' + (kept.length ? 'We released the weeks you could still change. The weeks below are within 14 days of delivery and stay reserved.' : 'Reservation ' + esc(r ? r.id : '') + ' is cancelled and the amounts were released.') +
+      '<div style="margin-top:16px"><button type="button" class="rbp-btn" data-act="new">Start a new reservation</button></div></div></section>' + (kept.length ? '<div class="rbp-weeks" style="margin-top:12px">' + resItemsHtml(kept) + '</div>' : '');
   }
 
   function modal(title, text, yes, yesAct, no) {
@@ -458,7 +497,8 @@
       if (!r || !r.ok) throw new Error((r && r.error) || 'weeks');
       S.weeks = r.weeks || []; S.mode = 'in'; S.screen = 'browse'; S.err = '';
       S.month = S.weeks.length ? monthOf(S.weeks[0].d) : '';
-      render(); window.scrollTo(0, 0);
+      if (o.then) o.then(); else { render(); window.scrollTo(0, 0); }
+      loadMine();
     }).catch(function (e) {
       if (String(e && e.message) === 'not_found') { signOut('We couldn’t open that account. Sign in with your buyer email.'); return; }
       S.mode = 'in'; S.weeks = []; render();
@@ -493,56 +533,74 @@
     render();
   }
 
-  function accountLabel() { return S.internal ? '[INTERNAL TEST] ' + S.who.account + ' (' + (S.who.email || 'no email') + ')' : S.who.account; }
-
-  function lineItems() {
-    var items = [], weeks = [];
+  // Everything in the cart (plus any reserved lines that are no longer on the menu, kept as they are)
+  function cartItems() {
+    var items = [];
     cartWeeks().forEach(function (w) {
-      var id = wid(w), c = S.cart[id], wk = { d: w.d, items: [], total: 0 };
-      SIZES.forEach(function (z) {
-        (w[z.sec] || []).forEach(function (s) {
-          var n = c[pid(w, s.n, z.k)]; if (!n) return;
-          var it = { deliveryWeek: w.d, strain: s.n, productSize: z.sku, qty: n, unitPrice: z.price, lineTotal: Math.round(n * z.price * 100) / 100 };
-          items.push(it); wk.items.push(it); wk.total += it.lineTotal;
-        });
-      });
-      weeks.push(wk);
+      var c = S.cart[wid(w)];
+      SIZES.forEach(function (z) { (w[z.sec] || []).forEach(function (s) { var n = c[pid(w, s.n, z.k)]; if (n) items.push({ deliveryWeek: w.d, strain: s.n, productSize: z.sku, qty: n }); }); });
     });
-    weeks.forEach(function (w) { w.total = Math.round(w.total * 100) / 100; });
-    return { items: items, weeks: weeks, total: Math.round(weeks.reduce(function (s, w) { return s + w.total; }, 0) * 100) / 100 };
+    (S.extra || []).forEach(function (i) { items.push({ deliveryWeek: i.week, strain: i.strain, productSize: i.size, qty: i.qty }); });
+    return items;
   }
-
-  function newId() { return 'RB-' + new Date().getFullYear() + '-' + String(Math.floor(1000 + Math.random() * 9000)); }
+  var ERR = {
+    locked: 'Those weeks are within 14 days of delivery now, so they\u2019re locked in. Reply to your confirmation email or call your rep.',
+    cancelled: 'This reservation was already cancelled.',
+    not_found: 'We couldn\u2019t find that reservation. Use the link in your latest confirmation email.',
+    empty: 'Those strains aren\u2019t on the menu for that week anymore. Go back and pick again.',
+    store: 'That store isn\u2019t linked to your email. Ask your Redbird sales rep.'
+  };
 
   function send() {
-    var L = lineItems(); if (!L.items.length) return;
-    var editing = S.editing && S.submitted, id = editing ? S.submitted.id : newId();
-    var body = {
-      action: editing ? 'updateReservation' : 'writeReservation',
-      reservationId: id, account: accountLabel(), contactName: S.who.name, contactEmail: S.who.email,
-      isInternalTest: S.internal, items: L.items, grandTotal: L.total, notes: S.notes.trim(), sendConfirmation: true
-    };
+    var items = cartItems(); if (!items.length) return;
+    var editing = S.editing && S.submitted;
+    var body = editing ? { action: 'update', id: S.submitted.reservation.id, t: S.submitted.t, items: items, notes: S.notes.trim() }
+      : { action: 'reserve', email: S.who.email, account: S.who.account, items: items, notes: S.notes.trim() };
     S.busy = true; S.err = ''; render();
-    postJSON(CFG.CRM_API, body).then(function (r) {
+    postJSON(CFG.PORTAL_API, body).then(function (r) {
       S.busy = false;
-      if (!r || !r.success) throw new Error((r && r.error) || 'failed');
-      S.submitted = { id: id, weeks: L.weeks, total: L.total, updated: !!editing, cart: JSON.parse(JSON.stringify(S.cart)), notes: S.notes };
-      S.editing = false; S.screen = 'done'; render(); window.scrollTo(0, 0);
+      if (!r || !r.ok) { S.err = ERR[r && r.error] || 'We couldn\u2019t confirm that went through. Check your email for a confirmation before trying again, or contact your Redbird sales rep.'; render(); return; }
+      S.submitted = { reservation: r.reservation, t: editing ? S.submitted.t : r.t, updated: !!editing };
+      S.editing = false; S.extra = []; S.cart = {}; S.notes = '';
+      S.screen = r.cancelled ? 'cancelled' : 'done'; render(); window.scrollTo(0, 0); loadMine();
     }).catch(function () {
       S.busy = false;
-      S.err = 'We couldn’t confirm that went through. Check your email for a confirmation before trying again, or contact your Redbird sales rep.';
+      S.err = 'We couldn\u2019t confirm that went through. Check your email for a confirmation before trying again, or contact your Redbird sales rep.';
       render();
     });
   }
 
   function cancelRes() {
     if (!S.submitted) return;
-    S.busy = true; render();
-    postJSON(CFG.CRM_API, { action: 'cancelReservation', reservationId: S.submitted.id, account: accountLabel() }).then(function (r) {
+    S.busy = true; S.err = ''; render();
+    postJSON(CFG.PORTAL_API, { action: 'cancel', id: S.submitted.reservation.id, t: S.submitted.t }).then(function (r) {
       S.busy = false;
-      if (!r || !r.success) throw new Error('failed');
-      S.cart = {}; S.notes = ''; S.editing = false; S.screen = 'cancelled'; render(); window.scrollTo(0, 0);
-    }).catch(function () { S.busy = false; S.err = 'We couldn’t cancel just now. Please try again, or contact your Redbird sales rep.'; render(); });
+      if (!r || !r.ok) { S.err = ERR[r && r.error] || 'We couldn\u2019t cancel just now. Please try again, or contact your Redbird sales rep.'; render(); return; }
+      S.submitted.reservation = r.reservation;
+      S.cart = {}; S.notes = ''; S.editing = false; S.extra = []; S.screen = 'cancelled'; render(); window.scrollTo(0, 0); loadMine();
+    }).catch(function () { S.busy = false; S.err = 'We couldn\u2019t cancel just now. Please try again, or contact your Redbird sales rep.'; render(); });
+  }
+
+  // Put a saved reservation back in the cart to change it (weeks inside 14 days stay as they are).
+  function editSubmitted() {
+    var r = S.submitted.reservation; S.cart = {}; S.extra = [];
+    r.items.forEach(function (i) {
+      if (i.locked) return;
+      var w = null; S.weeks.forEach(function (x) { if (x.d === i.week) w = x; });
+      var z = null; SIZES.forEach(function (x) { if (x.sku === i.size) z = x; });
+      var onMenu = w && z && (w[z.sec] || []).some(function (s) { return s.n.toLowerCase() === i.strain.toLowerCase(); });
+      if (onMenu) setQty(wid(w), pid(w, (w[z.sec].filter(function (s) { return s.n.toLowerCase() === i.strain.toLowerCase(); })[0]).n, z.k), i.qty);
+      else S.extra.push(i);
+    });
+    S.notes = r.notes || ''; S.editing = true; S.screen = 'review'; S.err = ''; render(); window.scrollTo(0, 0);
+  }
+
+  function loadMine() {
+    if (S.mode !== 'in') return;
+    api({ action: 'mine', email: S.who.email, acct: S.who.account }).then(function (r) {
+      S.mine = r && r.ok ? r.reservations : [];
+      if (S.screen === 'browse') { var y = window.pageYOffset; render(); window.scrollTo(0, y); }
+    }).catch(function () {});
   }
 
   function requestAccess(form) {
@@ -589,9 +647,15 @@
         if (S.editing) send();
         else modal('Send this reservation?', plural(T.u, 'unit') + ' across ' + plural(T.w, 'delivery week') + ' for ' + money(T.d) + '.', 'Yes, send it', send, 'Go back');
         break;
-      case 'edit': S.cart = JSON.parse(JSON.stringify(S.submitted.cart)); S.notes = S.submitted.notes || ''; S.editing = true; S.screen = 'review'; S.err = ''; render(); window.scrollTo(0, 0); break;
+      case 'edit': editSubmitted(); break;
+      case 'resend':
+        var rid = el.getAttribute('data-id'); el.disabled = true; el.textContent = 'Sending…';
+        postJSON(CFG.PORTAL_API, { action: 'resend', id: rid, email: S.who.email, account: S.who.account }).then(function (r) {
+          S.sentLink[rid] = r && r.ok ? r.to : 'your email'; render();
+        }).catch(function () { el.disabled = false; el.textContent = 'Try again'; });
+        break;
       case 'askcancel': modal('Cancel this reservation?', 'This can’t be undone. Your reserved quantities will be released.', 'Yes, cancel it', cancelRes, 'Keep it'); break;
-      case 'new': S.cart = {}; S.submitted = null; S.editing = false; S.notes = ''; S.open = {}; S.screen = 'browse'; S.err = ''; render(); window.scrollTo(0, 0); break;
+      case 'new': S.cart = {}; S.submitted = null; S.editing = false; S.extra = []; S.notes = ''; S.open = {}; S.screen = 'browse'; S.err = ''; setUrl({ acct: S.who.account, contact: S.who.name, email: S.who.email, internal: S.internal ? '1' : '' }); render(); window.scrollTo(0, 0); break;
       case 'signout': signOut(); break;
       case 'menu': S.menu = !S.menu; render(); break;
       case 'store': switchStore(+el.getAttribute('data-i')); break;
@@ -634,16 +698,16 @@
 
   // ───────── start ─────────
   // Links the old portal used keep working: ?c=<contactId> (Josh's buyer links), ?acct=&email=, ?acct= alone.
-  function contactContext(id) {
-    return new Promise(function (resolve) {
-      var cb = '__rbCtx' + Date.now(), s = document.createElement('script'), done = false;
-      function finish(v) { if (done) return; done = true; try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); resolve(v); }
-      window[cb] = function (r) { finish(r && r.ok && r.contact && r.accounts && r.accounts.length ? r : null); };
-      s.src = CFG.CRM_API + '?action=getContactPortalContext&contactId=' + encodeURIComponent(id) + '&callback=' + cb;
-      s.onerror = function () { finish(null); };
-      setTimeout(function () { finish(null); }, 12000);
-      document.head.appendChild(s);
-    });
+  // New: ?r=<reservation>&t=<key> from the "View or change this reservation" button in the emails.
+  function openReservation(id, t) {
+    api({ action: 'reservation', r: id, t: t }).then(function (r) {
+      if (!r || !r.ok) { S.err = 'That reservation link didn\u2019t work. Sign in, or use the link in your latest confirmation email.'; loadTeaser(); return; }
+      var w = r.who, res = r.reservation;
+      enter({ email: w.email, name: w.name, accounts: w.stores, internal: w.internal, keepUrl: true, then: function () {
+        S.submitted = { reservation: res, t: t, viewing: true };
+        S.screen = res.items.length ? 'done' : 'cancelled'; render(); window.scrollTo(0, 0);
+      } });
+    }).catch(function () { S.err = 'We couldn\u2019t reach our system just now. Please try again in a moment.'; loadTeaser(); });
   }
 
   function start() {
@@ -652,11 +716,12 @@
     var acct = p.get('acct') || p.get('account') || '', email = (p.get('email') || '').trim().toLowerCase();
     var remembered = stored('rb_portal_email');
     render();
+    if (p.get('r') && p.get('t')) { openReservation(p.get('r'), p.get('t')); return; }
     if (c) {
-      contactContext(c).then(function (r) {
-        if (!r) { S.err = 'We couldn’t open your account link. Enter your email to continue.'; loadTeaser(); return; }
+      api({ action: 'context', c: c }).then(function (r) {
+        if (!r || !r.ok) { S.err = 'We couldn\u2019t open your account link. Enter your email to continue.'; loadTeaser(); return; }
         enter({ email: r.contact.email || '', name: ((r.contact.firstName || '') + ' ' + (r.contact.lastName || '')).trim(), accounts: r.accounts.map(function (a) { return a.tradeName; }), keepUrl: true });
-      });
+      }).catch(function () { S.err = 'We couldn\u2019t open your account link. Enter your email to continue.'; loadTeaser(); });
       return;
     }
     if (email) { signInQuiet(email); return; }

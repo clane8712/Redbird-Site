@@ -194,6 +194,7 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
   .rbp-tools::-webkit-scrollbar { display: none; }
   .rbp-search { display: none; }
   .rbp-card { padding: 16px; }
+  .rbp-card.rbp-rcard { padding: 0; }
   .rbp-card-title .rbp-bebas { font-size: 28px; }
   .rbp-q button { width: 44px; }
   .rbp-q input { width: 54px; font-size: 16px; }
@@ -207,3 +208,17 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
   .rbp-ritem-ctl { width: 100%; justify-content: space-between; }
   .rbp-input, .rbp-notes textarea, .rbp-search { font-size: 16px; }
 }
+
+/* signed out: every week card and row opens the sign-in card */
+.rbp-out, .rbp-lock { cursor: pointer; }
+.rbp-lock:hover { border-color: rgba(0,0,0,0.16); }
+.rbp-tools [data-act="locked"] { cursor: pointer; }
+
+/* signed in: open reservations */
+.rbp-mine { background: #FFFFFF; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+.rbp-mine > .rbp-mono { font-size: 10.5px; font-weight: 700; color: var(--mute); margin-bottom: 4px; }
+.rbp-mine-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--line); }
+.rbp-mine-row:first-of-type { border-top: 0; }
+.rbp-mine-row b { font-size: 14px; margin-right: 8px; }
+.rbp-mine-row .rbp-meta { margin: 0; font-size: 13px; }
+.rbp-mine .rbp-textlink { font-size: 13px; }
