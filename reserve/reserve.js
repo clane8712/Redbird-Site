@@ -222,8 +222,10 @@
   // Closed week: strains split by product line so flower and pre-rolls never blur together
   function byType(w) {
     var rows = '';
-    if ((w.flower || []).length) rows += '<div class="rbp-bytype"><span class="rbp-mono">Flower &amp; Micro Buds</span><span>' + esc(w.flower.map(function (x) { return x.n; }).join(' · ')) + '</span></div>';
-    if ((w.pre || []).length) rows += '<div class="rbp-bytype"><span class="rbp-mono">Pre-rolls</span><span>' + esc(w.pre.map(function (x) { return x.n; }).join(' · ')) + '</span></div>';
+    // Each strain name stays whole; the dot rides on the end of the name before it, so no line starts with one.
+    var names = function (list) { return list.map(function (x) { return '<span class="rbp-sn">' + esc(x.n) + '</span>'; }).join(' '); };
+    if ((w.flower || []).length) rows += '<div class="rbp-bytype"><span class="rbp-mono">Flower &amp; Micro Buds</span><span>' + names(w.flower) + '</span></div>';
+    if ((w.pre || []).length) rows += '<div class="rbp-bytype"><span class="rbp-mono">Pre-rolls</span><span>' + names(w.pre) + '</span></div>';
     return '<div class="rbp-preview">' + rows + '</div>';
   }
 
