@@ -10,7 +10,7 @@
   'use strict';
 
   var CFG = Object.assign({
-    PORTAL_API: 'https://script.google.com/macros/s/PASTE_PORTAL_WEB_APP_ID/exec',   // Chris's Portal.gs
+    PORTAL_API: 'https://script.google.com/macros/s/AKfycbxleeQ3JUPYfYr1VZl_Ac_ata1Qt8sjY_I9SsanvVf2Zy07jn_daHUQbet3PPL_bGVJaw/exec',   // Chris's Portal.gs
     CRM_API: 'https://script.google.com/macros/s/AKfycbyR-wEn91NXeuciv9q6AIFVWNnJynVzZJiKpoO7tDgPcQXTQtCRWszURRd0UJ0xXyzT_g/exec'   // Josh's CRM script
   }, window.RB_PORTAL_CFG || {});
 
