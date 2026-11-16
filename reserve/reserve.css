@@ -129,7 +129,8 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 .rbp-later { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
 .rbp-later > .rbp-mono { font-size: 10.5px; font-weight: 700; color: var(--mute); }
 .rbp-lock { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
-.rbp-lock > div { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.rbp-lock > div { display: grid; grid-template-columns: 152px 96px 1fr; gap: 10px; align-items: center; flex: 1; min-width: 0; }   /* dates, tags and types line up row to row */
+.rbp-lock .rbp-tag { justify-self: start; }
 .rbp-lock .rbp-bebas { font-size: 22px; line-height: 1; }
 .rbp-lock .rbp-meta { margin: 0; font-size: 13px; }
 
@@ -197,6 +198,8 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
   .rbp-q button { width: 44px; }
   .rbp-q input { width: 54px; font-size: 16px; }
   .rbp-fade { max-height: 230px; }
+  .rbp-lock > div { grid-template-columns: 150px 1fr; row-gap: 4px; }
+  .rbp-lock .rbp-meta { grid-column: 1 / -1; }
   .rbp-gate { left: 12px; right: 12px; padding: 18px 16px; }
   .rbp-gate h2 { font-size: 26px; }
   .rbp-bar > div { padding: 12px 20px; }
