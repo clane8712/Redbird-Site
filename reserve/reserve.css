@@ -105,6 +105,14 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 .rbp-fade::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 75%; background: linear-gradient(rgba(242,242,244,0), var(--bg) 85%); pointer-events: none; }
 .rbp-gate { position: relative; z-index: 2; max-width: 520px; margin: -70px auto 0; border-radius: 14px; padding: 24px; box-shadow: 0 18px 50px rgba(0,0,0,0.14); background: #FFFFFF; border: 1px solid var(--line); scroll-margin-top: calc(var(--hdr) + 24px); }
 .rbp-gate.alone { margin-top: 8px; }
+/* sign-in card follows you down the page, compact, then settles in over the faded week */
+.rbp-gate.signin { position: sticky; bottom: 12px; }
+.rbp-gate .rbp-mini { display: none; font-size: 13px; color: var(--mute); margin-top: 8px; }
+.rbp-gate.floating { padding-top: 16px; padding-bottom: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.22); }
+.rbp-gate.floating h2 { font-size: 24px; }
+.rbp-gate.floating > p, .rbp-gate.floating .rbp-or, .rbp-gate.floating > .rbp-btn.ghost { display: none; }
+.rbp-gate.floating .rbp-mini { display: block; }
+.rbp-gate.floating .rbp-row { margin-top: 8px; }
 .rbp-gate h2 { margin: 0; font-size: 30px; line-height: 1; }
 .rbp-gate p { font-size: 14px; color: var(--body); line-height: 1.5; margin: 6px 0 0; }
 .rbp-row { display: flex; gap: 8px; margin-top: 12px; }

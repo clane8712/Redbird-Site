@@ -131,6 +131,7 @@
     else html += main(browse(), '', totals().u > 0) + bar();
     root.innerHTML = html;
     if (S.mode === 'in' && S.screen === 'browse') spy();
+    if (S.mode === 'out') floatGate();
   }
   function main(inner, cls, hasBar) { return '<main class="rbp-main' + (cls ? ' ' + cls : '') + (hasBar ? ' has-bar' : '') + '">' + inner + '</main>'; }
 
@@ -236,7 +237,7 @@
   }
 
   function gateCard(alone) {
-    var c = '<div class="rbp-gate' + (alone ? ' alone' : '') + '" id="rbp-gate">';
+    var c = '<div class="rbp-gate' + (alone ? ' alone' : '') + (S.gate === 'signin' ? ' signin' : '') + '" id="rbp-gate">';
     if (S.gate === 'request') {
       c += '<h2 class="rbp-bebas">Request access</h2><p>Goes to the Redbird sales team. We’ll set you up and email you back.</p>' +
         '<form class="rbp-form" data-form="request" novalidate style="margin-top:12px">' +
@@ -258,7 +259,8 @@
         '<button class="rbp-btn" type="submit"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'One sec…' : 'Sign in') + '</button></form>' +
         (S.err ? '<div class="rbp-msg err" role="alert">' + S.err + '</div>' : '') +
         '<div class="rbp-or"><span></span>Not set up yet?<span></span></div>' +
-        '<button type="button" class="rbp-btn ghost block" data-act="gate" data-to="request">Request access</button>';
+        '<button type="button" class="rbp-btn ghost block" data-act="gate" data-to="request">Request access</button>' +
+        '<div class="rbp-mini">Not set up yet? <button type="button" class="rbp-textlink" data-act="gate" data-to="request" style="font-size:13px">Request access</button></div>';
     }
     return c + '</div>';
   }
@@ -381,6 +383,26 @@
       bar.querySelector('[data-sub]').textContent = plural(T.u, 'unit') + ' · ' + plural(T.w, 'week');
       var m = root.querySelector('main.rbp-main'); if (m) m.classList.toggle('has-bar', T.u > 0);
     }
+  }
+
+  // ───────── signed out: sign-in card floats until it reaches its spot ─────────
+  var floatOn = false;
+  function floatGate() {
+    var g = document.getElementById('rbp-gate');
+    if (!g) return;
+    var check = function () {
+      var gate = document.getElementById('rbp-gate');
+      if (!gate || !gate.classList.contains('signin')) return;
+      // its spot = where the card's top would sit with nothing floating: just under the faded week
+      if (!gate.classList.contains('floating')) gate.setAttribute('data-full', gate.offsetHeight);
+      var anchor = gate.previousElementSibling;
+      var spot = anchor ? anchor.getBoundingClientRect().bottom + (parseFloat(getComputedStyle(gate).marginTop) || 0) : 0;
+      var floating = spot + (+gate.getAttribute('data-full') || gate.offsetHeight) > window.innerHeight - 12 + 1;
+      if (gate.contains(document.activeElement) && gate.classList.contains('floating')) floating = true;   // don't jump while typing
+      gate.classList.toggle('floating', floating);
+    };
+    check();
+    if (!floatOn) { floatOn = true; window.addEventListener('scroll', check, { passive: true }); window.addEventListener('resize', check); }
   }
 
   // ───────── month tabs follow the scroll (desktop) ─────────
