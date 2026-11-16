@@ -298,14 +298,28 @@
   }
 
   // Search, size chips and month tabs. Signed out they look the same but every click goes to the sign-in card.
-  // Phone: one row — All · Flower · Micro · Pre-rolls. Picks the same sizes as the desktop chip groups.
+  // Phone: All · Flower · Micro · Pre-rolls, plus a size row for Flower and Pre-rolls (Micro has one size).
+  function phoneGroup() {
+    var picked = Object.keys(S.sizes).filter(function (k) { return S.sizes[k]; });
+    if (!picked.length) return -1;
+    for (var i = 0; i < CHIPS.length; i++) if (picked.every(function (k) { return CHIPS[i][1].indexOf(k) >= 0; })) return i;
+    return -1;
+  }
   function phoneTypes(locked) {
-    var picked = Object.keys(S.sizes).filter(function (k) { return S.sizes[k]; }).sort().join(',');
-    var opts = [['all', 'All', []]].concat(CHIPS.map(function (g, i) { return [String(i), g[0] === 'Micro Buds' ? 'Micro' : g[0], g[1]]; }));
-    return '<div class="rbp-sticky rbp-sticky-ph"><div class="rbp-seg" role="group" aria-label="Product type">' + opts.map(function (o) {
-      var on = !locked && o[2].slice().sort().join(',') === picked || locked && o[0] === 'all';
+    var g = locked ? -1 : phoneGroup();
+    var opts = [[-1, 'All']].concat(CHIPS.map(function (c, i) { return [i, c[0] === 'Micro Buds' ? 'Micro' : c[0]]; }));
+    var html = '<div class="rbp-sticky rbp-sticky-ph"><div class="rbp-seg" role="group" aria-label="Product type">' + opts.map(function (o) {
+      var on = o[0] === g;
       return '<button type="button" class="' + (on ? 'on' : '') + '"' + (locked ? ' data-act="locked"' : ' data-act="ptype" data-g="' + o[0] + '"') + ' aria-pressed="' + on + '">' + o[1] + '</button>';
-    }).join('') + '</div></div>';
+    }).join('') + '</div>';
+    if (g >= 0 && CHIPS[g][1].length > 1) {
+      var keys = CHIPS[g][1], all = keys.every(function (k) { return S.sizes[k]; });
+      html += '<div class="rbp-seg2" role="group" aria-label="Size"><span class="rbp-mono">Size</span>' + keys.map(function (k) {
+        var on = !all && !!S.sizes[k];
+        return '<button type="button" class="rbp-chip' + (on ? ' on' : '') + '" data-act="psize" data-k="' + k + '" aria-pressed="' + on + '">' + SIZE[k].col + '</button>';
+      }).join('') + (all ? '<span class="rbp-seg2-hint">All sizes</span>' : '') + '</div>';
+    }
+    return html + '</div>';
   }
 
   function tools(weeks, locked) {
@@ -726,7 +740,13 @@
         setQty(w, p, qty(w, p) + (+el.getAttribute('data-d'))); refreshNumbers(w, p); break;
       case 'remove': setQty(w, el.getAttribute('data-p'), 0); render(); break;
       case 'size': var k = el.getAttribute('data-k'); S.sizes[k] = !S.sizes[k]; render(); break;
-      case 'ptype': var g = el.getAttribute('data-g'); S.sizes = {}; if (g !== 'all') CHIPS[+g][1].forEach(function (z) { S.sizes[z] = true; }); render(); break;
+      case 'ptype': var g = +el.getAttribute('data-g'); S.sizes = {}; if (g >= 0) CHIPS[g][1].forEach(function (z) { S.sizes[z] = true; }); render(); break;
+      case 'psize':
+        // first tap narrows to that size; more taps add sizes; turning the last one off goes back to all sizes
+        var pk = el.getAttribute('data-k'), grp = CHIPS[phoneGroup()][1], allOn = grp.every(function (z) { return S.sizes[z]; });
+        if (allOn) { S.sizes = {}; S.sizes[pk] = true; }
+        else { S.sizes[pk] = !S.sizes[pk]; if (!grp.some(function (z) { return S.sizes[z]; })) grp.forEach(function (z) { S.sizes[z] = true; }); }
+        render(); break;
       case 'clear': S.q = ''; S.sizes = {}; render(); break;
       case 'month':
         var m = el.getAttribute('data-m'), card = root.querySelector('.rbp-card[data-month="' + m + '"]');

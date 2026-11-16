@@ -57,6 +57,10 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 .rbp-seg { display: flex; gap: 2px; background: #FFFFFF; border: 1px solid rgba(0,0,0,0.12); border-radius: 999px; padding: 3px; }
 .rbp-seg button { flex: 1; height: 36px; border: 0; border-radius: 999px; background: transparent; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
 .rbp-seg button.on { background: var(--ink); color: #FFFFFF; }
+.rbp-seg2 { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 0 4px; }
+.rbp-seg2 .rbp-mono { font-size: 10.5px; font-weight: 700; color: var(--mute); margin-right: 4px; }
+.rbp-seg2 .rbp-chip { height: 32px; }
+.rbp-seg2-hint { font-size: 12.5px; color: var(--mute); margin-left: 4px; }
 .rbp-month { height: 32px; padding: 0 14px; border-radius: 999px; border: 0; background: #FFFFFF; color: var(--ink); font-size: 13px; font-weight: 700; box-shadow: 0 0 0 1px var(--line); }
 .rbp-month.on { background: var(--red); color: #FFFFFF; box-shadow: none; }
 
