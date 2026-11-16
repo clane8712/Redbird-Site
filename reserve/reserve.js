@@ -124,7 +124,7 @@
     hdrHeight();
     var html = hero();
     if (S.mode === 'loading') html += main('<div class="rbp-loading"><span class="rbp-spin"></span>Loading upcoming harvests…</div>');
-    else if (S.mode === 'out') html += main(signedOut());
+    else if (S.mode === 'out') html += main(signedOut(), S.gate === 'signin' ? 'has-float' : '') + (S.gate === 'signin' ? floatCard() : '');
     else if (S.screen === 'review') html += main(review(), 'rbp-review');
     else if (S.screen === 'done') html += main(done(), 'rbp-review');
     else if (S.screen === 'cancelled') html += main(cancelled(), 'rbp-review');
@@ -237,7 +237,7 @@
   }
 
   function gateCard(alone) {
-    var c = '<div class="rbp-gate' + (alone ? ' alone' : '') + (S.gate === 'signin' ? ' signin' : '') + '" id="rbp-gate">';
+    var c = '<div class="rbp-gate' + (alone ? ' alone' : '') + '" id="rbp-gate">';
     if (S.gate === 'request') {
       c += '<h2 class="rbp-bebas">Request access</h2><p>Goes to the Redbird sales team. We’ll set you up and email you back.</p>' +
         '<form class="rbp-form" data-form="request" novalidate style="margin-top:12px">' +
@@ -259,10 +259,16 @@
         '<button class="rbp-btn" type="submit"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'One sec…' : 'Sign in') + '</button></form>' +
         (S.err ? '<div class="rbp-msg err" role="alert">' + S.err + '</div>' : '') +
         '<div class="rbp-or"><span></span>Not set up yet?<span></span></div>' +
-        '<button type="button" class="rbp-btn ghost block" data-act="gate" data-to="request">Request access</button>' +
-        '<div class="rbp-mini">Not set up yet? <button type="button" class="rbp-textlink" data-act="gate" data-to="request" style="font-size:13px">Request access</button></div>';
+        '<button type="button" class="rbp-btn ghost block" data-act="gate" data-to="request">Request access</button>';
     }
     return c + '</div>';
+  }
+
+  function floatCard() {
+    return '<div class="rbp-float" id="rbp-float" hidden><h2 class="rbp-bebas">Sign in to reserve</h2>' +
+      '<form class="rbp-row" data-form="signin" novalidate><input class="rbp-input" name="email" type="email" placeholder="buyer@yourshop.com" autocomplete="email" aria-label="Buyer email" value="' + esc(S.lastEmail || '') + '">' +
+      '<button class="rbp-btn" type="submit"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'One sec…' : 'Sign\u00a0in') + '</button></form>' +
+      '<div class="rbp-mini">Not set up yet? <button type="button" class="rbp-textlink" data-act="gate" data-to="request" style="font-size:13px">Request access</button></div></div>';
   }
 
   // ── signed in: browse ──
@@ -385,21 +391,18 @@
     }
   }
 
-  // ───────── signed out: sign-in card floats until it reaches its spot ─────────
+  // ───────── signed out: compact card floats whenever the full sign-in card is off screen ─────────
   var floatOn = false;
   function floatGate() {
-    var g = document.getElementById('rbp-gate');
-    if (!g) return;
     var check = function () {
-      var gate = document.getElementById('rbp-gate');
-      if (!gate || !gate.classList.contains('signin')) return;
-      // its spot = where the card's top would sit with nothing floating: just under the faded week
-      if (!gate.classList.contains('floating')) gate.setAttribute('data-full', gate.offsetHeight);
-      var anchor = gate.previousElementSibling;
-      var spot = anchor ? anchor.getBoundingClientRect().bottom + (parseFloat(getComputedStyle(gate).marginTop) || 0) : 0;
-      var floating = spot + (+gate.getAttribute('data-full') || gate.offsetHeight) > window.innerHeight - 12 + 1;
-      if (gate.contains(document.activeElement) && gate.classList.contains('floating')) floating = true;   // don't jump while typing
-      gate.classList.toggle('floating', floating);
+      var f = document.getElementById('rbp-float'), g = document.getElementById('rbp-gate');
+      if (!f || !g) return;
+      var r = g.getBoundingClientRect(), vh = window.innerHeight;
+      var inView = r.top < vh - 60 && r.bottom > hdrHeight() + 60;
+      if (f.contains(document.activeElement)) inView = false;          // don't hide it while they're typing in it
+      f.hidden = inView;
+      var foot = document.querySelector('footer'), ft = foot ? foot.getBoundingClientRect().top : vh;
+      f.style.bottom = Math.max(12, vh - ft + 12) + 'px';                 // rides above the footer instead of covering it
     };
     check();
     if (!floatOn) { floatOn = true; window.addEventListener('scroll', check, { passive: true }); window.addEventListener('resize', check); }
