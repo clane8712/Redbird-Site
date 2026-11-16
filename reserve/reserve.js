@@ -299,7 +299,7 @@
   function tools(weeks, locked) {
     if (phone()) return legend();   // phones: no size chips / search / month tabs, keeps the page simple
     var L = locked ? ' data-act="locked"' : '';
-    var html = '<div class="rbp-tools"><input class="rbp-search" type="search" placeholder="Search strains" aria-label="Search strains" value="' + (locked ? '' : esc(S.q)) + '"' + (locked ? ' readonly data-act="locked"' : ' data-act="search"') + '>';
+    var html = '<div class="rbp-sticky"><div class="rbp-tools"><input class="rbp-search" type="search" placeholder="Search strains" aria-label="Search strains" value="' + (locked ? '' : esc(S.q)) + '"' + (locked ? ' readonly data-act="locked"' : ' data-act="search"') + '>';
     html += CHIPS.map(function (g) {
       return '<div class="rbp-chipgroup"><span class="rbp-mono">' + g[0] + '</span>' + g[1].map(function (k) {
         var on = !locked && S.sizes[k];
@@ -311,7 +311,7 @@
     var months = [];
     weeks.forEach(function (w) { var m = monthOf(w.d); if (months.indexOf(m) < 0) months.push(m); });
     if (!phone() && months.length > 1) html += '<div class="rbp-months">' + months.map(function (m, i) { return '<button type="button" class="rbp-month' + ((locked ? months[0] : (S.month || months[0])) === m ? ' on' : '') + '"' + (L || ' data-act="month" data-m="' + m + '"') + '>' + m + '</button>'; }).join('') + '</div>';
-    return html + legend();
+    return html + '</div>' + legend();
   }
 
   // ── signed in: browse ──
@@ -359,7 +359,7 @@
       var id = wid(w), c = S.cart[id], t = weekTotals(id), shut = !!S.collapsed[id];
       html += '<section class="rbp-card rbp-rcard' + (shut ? ' shut' : '') + '"><div class="rbp-rhead" data-act="collapse" data-w="' + id + '" role="button" tabindex="0" aria-expanded="' + !shut + '">' +
         '<div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (shut ? '' : '<button type="button" class="rbp-textlink rbp-addmore" data-act="addmore" data-w="' + id + '">+ Add more</button>') + '</div>' +
-        '<div class="rbp-rhead-side"><span class="rbp-rtot"><i data-wu="' + id + '">' + (shut ? plural(Object.keys(c).length, 'item') + ' · ' : '') + plural(t.u, 'unit') + '</i><b data-wt="' + id + '">' + cents(t.d) + '</b></span>' +
+        '<div class="rbp-rhead-side">' + weekTotal(plural(t.u, 'unit'), cents(t.d), id, shut ? plural(Object.keys(c).length, 'item') + ' · ' : '') +
         '<span class="rbp-chev">' + CHEV + '</span></div></div>';
       if (!shut) {
         ['flower', 'pre'].forEach(function (sec) {
@@ -375,6 +375,7 @@
           });
           if (rows) html += '<div class="rbp-mono rbp-rsec">' + SEC_NAME[sec] + '</div>' + rows;
         });
+        html += weekFoot(w.d, plural(t.u, 'unit'), cents(t.d), id);
       }
       html += '</section>';
     });
@@ -387,11 +388,22 @@
   }
 
   // Review: the total and the send button stay at the bottom of the screen.
+  // Week total in a week's header: labeled and in the heading font so it never reads as another line item.
+  function weekTotal(units, amount, id, pre) {
+    var a = id ? ' data-wu="' + id + '"' : '', b = id ? ' data-wt="' + id + '"' : '';
+    return '<span class="rbp-rtot"><small class="rbp-mono">Week total</small><span><i' + a + '>' + (pre || '') + units + '</i><b class="rbp-bebas"' + b + '>' + amount + '</b></span></span>';
+  }
+  // Phone only: the week's subtotal sits at the bottom of the week instead of crowding the header.
+  function weekFoot(d, units, amount, id) {
+    var a = id ? ' data-wu="' + id + '"' : '', b = id ? ' data-wt="' + id + '"' : '';
+    return '<div class="rbp-wfoot"><div><span class="rbp-mono">Week of ' + shortDate(d) + ' total</span><i' + a + '>' + units + '</i></div><b class="rbp-bebas"' + b + '>' + amount + '</b></div>';
+  }
+
   function reviewBar() {
     var T = totals();
     var hasNote = !!S.notes.trim();
     return '<div class="rbp-bar narrow" id="rbp-bar"><div><div><div class="rbp-bebas" data-total>' + cents(T.d) + '</div><small data-sub>' + plural(T.u, 'unit') + ' · ' + plural(T.w, 'week') + '</small></div>' +
-      '<div class="rbp-bar-btns"><button type="button" class="rbp-btn ghost-dark" data-act="note">' + (hasNote ? '\u2713 Edit note' : '+ Add note') + '</button>' +
+      '<div class="rbp-bar-btns"><button type="button" class="rbp-btn ghost-dark" data-act="note">' + (hasNote ? '<span class="rbp-hide-ph">\u2713 Edit note</span><span class="rbp-show-ph">\u2713 Note</span>' : '<span class="rbp-hide-ph">+ Add note</span><span class="rbp-show-ph">+ Note</span>') + '</button>' +
       '<button type="button" class="rbp-btn" data-act="confirm"' + (S.busy || !T.u && !(S.extra && S.extra.length) ? ' disabled' : '') + '>' + (S.busy ? 'Sending\u2026' : S.editing ? 'Save changes' : 'Send reservation') + '</button></div></div></div>';
   }
 
@@ -420,9 +432,9 @@
   function resItemsHtml(items, note) {
     return resWeeks(items).map(function (w) {
       return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (w.items[0].locked ? '<small>Locked in</small>' : '') + '</div>' +
-        '<div class="rbp-rhead-side"><span class="rbp-rtot"><i>' + plural(w.units, 'unit') + '</i><b>' + cents(w.total) + '</b></span></div></div>' +
+        '<div class="rbp-rhead-side">' + weekTotal(plural(w.units, 'unit'), cents(w.total)) + '</div></div>' +
         w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.size) + ' · ' + it.qty + ' × ' + cents(it.unitPrice) + '</div></div><span class="rbp-line">' + cents(it.lineTotal) + '</span></div>'; }).join('') +
-        '</section>';
+        weekFoot(w.d, plural(w.units, 'unit'), cents(w.total)) + '</section>';
     }).join('');
   }
 
@@ -473,9 +485,9 @@
     var b = root.querySelector('[data-badge="' + weekId + '"]');
     if (b) { b.hidden = !t.u; b.textContent = t.u ? plural(t.u, 'unit') + ' · ' + money(t.d) : ''; }
     var line = root.querySelector('[data-line="' + p + '"]'); if (line && pr) line.textContent = cents(n * pr.size.price);
-    var wt = root.querySelector('[data-wt="' + weekId + '"]'); if (wt) wt.textContent = cents(t.d);
+    root.querySelectorAll('[data-wt="' + weekId + '"]').forEach(function (x) { x.textContent = cents(t.d); });
     var wt2 = root.querySelector('[data-wt2="' + weekId + '"]'); if (wt2) wt2.textContent = money(t.d);
-    var wu = root.querySelector('[data-wu="' + weekId + '"]'); if (wu) wu.textContent = (S.collapsed[weekId] ? plural(Object.keys(S.cart[weekId] || {}).length, 'item') + ' · ' : '') + plural(t.u, 'unit');
+    root.querySelectorAll('[data-wu="' + weekId + '"]').forEach(function (x) { x.textContent = (S.collapsed[weekId] ? plural(Object.keys(S.cart[weekId] || {}).length, 'item') + ' · ' : '') + plural(t.u, 'unit'); });
     var tu = root.querySelector('[data-tu]'); if (tu) tu.textContent = plural(T.u, 'unit');
     root.querySelectorAll('[data-total]').forEach(function (el) { el.textContent = S.screen === 'review' ? cents(T.d) : money(T.d); });
     var bar = document.getElementById('rbp-bar');
@@ -496,7 +508,7 @@
     if (spyOn) return; spyOn = true;
     window.addEventListener('scroll', function () {
       if (S.mode !== 'in' || S.screen !== 'browse') return;
-      var line = hdrHeight() + 70, cur = '';
+      var line = hdrHeight() + stickyH() + 20, cur = '';
       root.querySelectorAll('.rbp-card[data-month]').forEach(function (c) { if (c.getBoundingClientRect().top <= line) cur = c.getAttribute('data-month'); });
       var first = root.querySelector('.rbp-card[data-month]');
       cur = cur || (first && first.getAttribute('data-month')) || '';
@@ -506,6 +518,8 @@
       }
     }, { passive: true });
   }
+  // Desktop: the search/size/month bar sticks under the site header, so scrolled-to cards land below it.
+  function stickyH() { var b = root.querySelector('.rbp-sticky'); return b && !phone() ? b.offsetHeight + 10 : 58; }
   function scrollToEl(el, extra) {
     if (!el) return;
     var y = el.getBoundingClientRect().top + window.pageYOffset - hdrHeight() - (extra || 12);
@@ -518,7 +532,7 @@
     if (phone()) S.open = {};               // phone: one week open at a time (amounts stay in the cart)
     if (opening) S.open[id] = true; else delete S.open[id];
     render();
-    if (opening) scrollToEl(document.getElementById('card-' + id), phone() ? 8 : 58);
+    if (opening) scrollToEl(document.getElementById('card-' + id), phone() ? 8 : stickyH());
   }
 
   function focusGate() {
@@ -704,10 +718,10 @@
       case 'month':
         var m = el.getAttribute('data-m'), card = root.querySelector('.rbp-card[data-month="' + m + '"]');
         S.month = m; root.querySelectorAll('.rbp-month').forEach(function (b) { b.classList.toggle('on', b === el); });
-        scrollToEl(card, 58); break;
+        scrollToEl(card, stickyH()); break;
       case 'review': S.screen = 'review'; S.err = ''; render(); window.scrollTo(0, 0); break;
       case 'browse': S.screen = 'browse'; S.err = ''; render(); window.scrollTo(0, 0); break;
-      case 'addmore': S.screen = 'browse'; S.err = ''; if (phone()) S.open = {}; S.open[w] = true; render(); scrollToEl(document.getElementById('card-' + w), phone() ? 8 : 58); break;
+      case 'addmore': S.screen = 'browse'; S.err = ''; if (phone()) S.open = {}; S.open[w] = true; render(); scrollToEl(document.getElementById('card-' + w), phone() ? 8 : stickyH()); break;
       case 'confirm':
         var T = totals();
         if (S.editing) send();
