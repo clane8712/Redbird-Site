@@ -124,14 +124,14 @@
     hdrHeight();
     var html = hero();
     if (S.mode === 'loading') html += main('<div class="rbp-loading"><span class="rbp-spin"></span>Loading upcoming harvests…</div>');
-    else if (S.mode === 'out') html += main(signedOut(), S.gate === 'signin' ? 'has-float' : '') + (S.gate === 'signin' ? floatCard() : '');
+    else if (S.mode === 'out') html += main(signedOut()) + gateCard();
     else if (S.screen === 'review') html += main(review(), 'rbp-review');
     else if (S.screen === 'done') html += main(done(), 'rbp-review');
     else if (S.screen === 'cancelled') html += main(cancelled(), 'rbp-review');
     else html += main(browse(), '', totals().u > 0) + bar();
     root.innerHTML = html;
     if (S.mode === 'in' && S.screen === 'browse') spy();
-    if (S.mode === 'out') floatGate();
+
   }
   function main(inner, cls, hasBar) { return '<main class="rbp-main' + (cls ? ' ' + cls : '') + (hasBar ? ' has-bar' : '') + '">' + inner + '</main>'; }
 
@@ -221,12 +221,12 @@
   function signedOut() {
     var weeks = (S.teaser && S.teaser.weeks) || [];
     var html = legend();
-    if (!weeks.length) return html + gateCard(true) + (S.teaser ? '<p class="rbp-fine" style="text-align:center;margin-top:16px">New weeks are posted as harvests get scheduled.</p>' : '');
+    if (!weeks.length) return html + (S.teaser ? '<section class="rbp-card"><div class="rbp-empty">New weeks are posted as harvests get scheduled. Check back soon.</div></section>' : '');
     var w1 = weeks[0], w2 = weeks[1];
     html += '<div class="rbp-weeks">';
     html += '<section class="rbp-card">' + weekHead(w1, { out: true }) + grid(w1, visible(w1), true) + '<div class="rbp-note">Sign in to see pricing and reserve this week.</div></section>';
     if (w2) html += '<div class="rbp-fade" aria-hidden="true"><section class="rbp-card">' + weekHead(w2, { out: true }) + grid(w2, visible(w2), true) + '</section></div>';
-    html += '</div>' + gateCard(!w2);
+    html += '</div>';
     var rest = weeks.slice(w2 ? 2 : 1);
     if (rest.length) {
       html += '<div class="rbp-later"><div class="rbp-mono">Also coming up</div>' + rest.map(function (w) {
@@ -236,8 +236,8 @@
     return html;
   }
 
-  function gateCard(alone) {
-    var c = '<div class="rbp-gate' + (alone ? ' alone' : '') + '" id="rbp-gate">';
+  function gateCard() {
+    var c = '<div class="rbp-gate ' + S.gate + '" id="rbp-gate" role="region" aria-label="Sign in">';
     if (S.gate === 'request') {
       c += '<h2 class="rbp-bebas">Request access</h2><p>Goes to the Redbird sales team. We’ll set you up and email you back.</p>' +
         '<form class="rbp-form" data-form="request" novalidate style="margin-top:12px">' +
@@ -262,13 +262,6 @@
         '<button type="button" class="rbp-btn ghost block" data-act="gate" data-to="request">Request access</button>';
     }
     return c + '</div>';
-  }
-
-  function floatCard() {
-    return '<div class="rbp-float" id="rbp-float" hidden><h2 class="rbp-bebas">Sign in to reserve</h2>' +
-      '<form class="rbp-row" data-form="signin" novalidate><input class="rbp-input" name="email" type="email" placeholder="buyer@yourshop.com" autocomplete="email" aria-label="Buyer email" value="' + esc(S.lastEmail || '') + '">' +
-      '<button class="rbp-btn" type="submit"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'One sec…' : 'Sign\u00a0in') + '</button></form>' +
-      '<div class="rbp-mini">Not set up yet? <button type="button" class="rbp-textlink" data-act="gate" data-to="request" style="font-size:13px">Request access</button></div></div>';
   }
 
   // ── signed in: browse ──
@@ -391,22 +384,8 @@
     }
   }
 
-  // ───────── signed out: compact card floats whenever the full sign-in card is off screen ─────────
-  var floatOn = false;
-  function floatGate() {
-    var check = function () {
-      var f = document.getElementById('rbp-float'), g = document.getElementById('rbp-gate');
-      if (!f || !g) return;
-      var r = g.getBoundingClientRect(), vh = window.innerHeight;
-      var inView = r.top < vh - 60 && r.bottom > hdrHeight() + 60;
-      if (f.contains(document.activeElement)) inView = false;          // don't hide it while they're typing in it
-      f.hidden = inView;
-      var foot = document.querySelector('footer'), ft = foot ? foot.getBoundingClientRect().top : vh;
-      f.style.bottom = Math.max(12, vh - ft + 12) + 'px';                 // rides above the footer instead of covering it
-    };
-    check();
-    if (!floatOn) { floatOn = true; window.addEventListener('scroll', check, { passive: true }); window.addEventListener('resize', check); }
-  }
+  // ───────── signed out: the sign-in card stays put at the bottom of the screen ─────────
+  // The sign-in card sits in the middle of the screen the whole way down (it's meant to cover the preview).
 
   // ───────── month tabs follow the scroll (desktop) ─────────
   var spyOn = false;
@@ -441,8 +420,9 @@
 
   function focusGate() {
     if (S.gate !== 'signin') { S.gate = 'signin'; S.err = ''; render(); }
-    var g = document.getElementById('rbp-gate'); scrollToEl(g, 24);
-    var inp = g && g.querySelector('input[name="email"]'); if (inp) setTimeout(function () { inp.focus({ preventScroll: true }); }, 350);
+    var g = document.getElementById('rbp-gate'), inp = g && g.querySelector('input[name="email"]');
+    if (inp) inp.focus({ preventScroll: true });
+    if (g) { g.classList.remove('nudge'); void g.offsetWidth; g.classList.add('nudge'); }
   }
 
   function setUrl(params) {
@@ -618,7 +598,7 @@
       case 'retry': enter({ email: S.who.email, name: S.who.name, accounts: S.accounts.length ? S.accounts : [S.who.account], internal: S.internal, keepUrl: true }); break;
     }
   });
-  function focusGate2() { var g = document.getElementById('rbp-gate'); if (g) { scrollToEl(g, 24); var i = g.querySelector('input'); if (i) setTimeout(function () { i.focus({ preventScroll: true }); }, 350); } }
+  function focusGate2() { var g = document.getElementById('rbp-gate'), i = g && g.querySelector('input'); if (i) i.focus({ preventScroll: true }); }
 
   root.addEventListener('submit', function (ev) {
     var f = ev.target; ev.preventDefault();
