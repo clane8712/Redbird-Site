@@ -325,7 +325,7 @@
     html += '<div class="rbp-weeks">';
     weeks.forEach(function (w) {
       var id = wid(w), c = S.cart[id], t = weekTotals(id);
-      html += '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span><small>Delivers ' + longDate(w.d) + '</small></div>' +
+      html += '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span></div>' +
         '<button type="button" class="rbp-textlink" data-act="addmore" data-w="' + id + '">+ Add more</button></div>';
       SIZES.forEach(function (z) {
         (w[z.sec] || []).forEach(function (s) {
@@ -357,7 +357,7 @@
   }
   function resItemsHtml(items, note) {
     return resWeeks(items).map(function (w) {
-      return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span><small>Delivers ' + longDate(w.d) + (w.items[0].locked ? ' · locked in' : '') + '</small></div>' + (note || '') + '</div>' +
+      return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (w.items[0].locked ? '<small>Locked in</small>' : '') + '</div>' + (note || '') + '</div>' +
         w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.size) + ' · ' + it.qty + ' × ' + money(it.unitPrice) + '</div></div><span class="rbp-line">' + money(it.lineTotal) + '</span></div>'; }).join('') +
         '<div class="rbp-sub"><span>Week subtotal · ' + plural(w.units, 'unit') + '</span><b>' + money(w.total) + '</b></div></section>';
     }).join('');
