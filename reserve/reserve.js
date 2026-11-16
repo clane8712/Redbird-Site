@@ -220,14 +220,16 @@
     return out.join(' · ') + ' strain' + (f + p === 1 ? '' : 's');
   }
   // Closed week: one column per product line, one strain per line, so flower and pre-rolls never blur together.
-  function byType(w, act) {
+  function byType(w, act, v) {
     var col = function (label, list) {
       return '<div class="rbp-bytype"><div class="rbp-mono">' + label + '</div><ul>' +
         list.map(function (x) { return '<li>' + esc(x.n) + '</li>'; }).join('') + '</ul></div>';
     };
     var cols = '';
-    if ((w.flower || []).length) cols += col('Flower &amp; Micro Buds', w.flower);
-    if ((w.pre || []).length) cols += col('Pre-rolls', w.pre);
+    // v = what the filters leave showing (signed in); without it, list everything
+    var fl = v ? (v.flower ? v.flower.list : []) : (w.flower || []), pr = v ? (v.pre ? v.pre.list : []) : (w.pre || []);
+    if (fl.length) cols += col('Flower &amp; Micro Buds', fl);
+    if (pr.length) cols += col('Pre-rolls', pr);
     return '<div class="rbp-preview" data-act="' + (act || 'toggle') + '" data-w="' + wid(w) + '">' + cols + '</div>';
   }
 
@@ -296,8 +298,18 @@
   }
 
   // Search, size chips and month tabs. Signed out they look the same but every click goes to the sign-in card.
+  // Phone: one row — All · Flower · Micro · Pre-rolls. Picks the same sizes as the desktop chip groups.
+  function phoneTypes(locked) {
+    var picked = Object.keys(S.sizes).filter(function (k) { return S.sizes[k]; }).sort().join(',');
+    var opts = [['all', 'All', []]].concat(CHIPS.map(function (g, i) { return [String(i), g[0] === 'Micro Buds' ? 'Micro' : g[0], g[1]]; }));
+    return '<div class="rbp-sticky rbp-sticky-ph"><div class="rbp-seg" role="group" aria-label="Product type">' + opts.map(function (o) {
+      var on = !locked && o[2].slice().sort().join(',') === picked || locked && o[0] === 'all';
+      return '<button type="button" class="' + (on ? 'on' : '') + '"' + (locked ? ' data-act="locked"' : ' data-act="ptype" data-g="' + o[0] + '"') + ' aria-pressed="' + on + '">' + o[1] + '</button>';
+    }).join('') + '</div></div>';
+  }
+
   function tools(weeks, locked) {
-    if (phone()) return legend();   // phones: no size chips / search / month tabs, keeps the page simple
+    if (phone()) return phoneTypes(locked) + legend();   // phones: just one row of product types, no search / size chips / month tabs
     var L = locked ? ' data-act="locked"' : '';
     var html = '<div class="rbp-sticky"><div class="rbp-tools"><input class="rbp-search" type="search" placeholder="Search strains" aria-label="Search strains" value="' + (locked ? '' : esc(S.q)) + '"' + (locked ? ' readonly data-act="locked"' : ' data-act="search"') + '>';
     html += CHIPS.map(function (g) {
@@ -322,7 +334,7 @@
       var v = visible(w);
       if (!v.flower && !v.pre) return '';
       var id = wid(w), open = !!S.open[id];
-      return '<section class="rbp-card' + (open ? ' is-open' : '') + '" id="card-' + id + '" data-month="' + monthOf(w.d) + '">' + weekHead(w, { open: open, preview: !open, click: !open }) + (open ? grid(w, v, false) : byType(w)) + '</section>';
+      return '<section class="rbp-card' + (open ? ' is-open' : '') + '" id="card-' + id + '" data-month="' + monthOf(w.d) + '">' + weekHead(w, { open: open, preview: !open, click: !open }) + (open ? grid(w, v, false) : byType(w, null, v)) + '</section>';
     }).join('');
     html += '<div class="rbp-weeks rbp-grid">' + (cards || '<section class="rbp-card is-open"><div class="rbp-empty">No strains match. <button type="button" class="rbp-textlink" data-act="clear">Clear filters</button></div></section>') + '</div>';
     return html;
@@ -519,7 +531,7 @@
     }, { passive: true });
   }
   // Desktop: the search/size/month bar sticks under the site header, so scrolled-to cards land below it.
-  function stickyH() { var b = root.querySelector('.rbp-sticky'); return b && !phone() ? b.offsetHeight + 10 : 58; }
+  function stickyH() { var b = root.querySelector('.rbp-sticky'); return b ? b.offsetHeight + 10 : 58; }
   function scrollToEl(el, extra) {
     if (!el) return;
     var y = el.getBoundingClientRect().top + window.pageYOffset - hdrHeight() - (extra || 12);
@@ -532,7 +544,7 @@
     if (phone()) S.open = {};               // phone: one week open at a time (amounts stay in the cart)
     if (opening) S.open[id] = true; else delete S.open[id];
     render();
-    if (opening) scrollToEl(document.getElementById('card-' + id), phone() ? 8 : stickyH());
+    if (opening) scrollToEl(document.getElementById('card-' + id), stickyH());
   }
 
   function focusGate() {
@@ -714,6 +726,7 @@
         setQty(w, p, qty(w, p) + (+el.getAttribute('data-d'))); refreshNumbers(w, p); break;
       case 'remove': setQty(w, el.getAttribute('data-p'), 0); render(); break;
       case 'size': var k = el.getAttribute('data-k'); S.sizes[k] = !S.sizes[k]; render(); break;
+      case 'ptype': var g = el.getAttribute('data-g'); S.sizes = {}; if (g !== 'all') CHIPS[+g][1].forEach(function (z) { S.sizes[z] = true; }); render(); break;
       case 'clear': S.q = ''; S.sizes = {}; render(); break;
       case 'month':
         var m = el.getAttribute('data-m'), card = root.querySelector('.rbp-card[data-month="' + m + '"]');
@@ -721,7 +734,7 @@
         scrollToEl(card, stickyH()); break;
       case 'review': S.screen = 'review'; S.err = ''; render(); window.scrollTo(0, 0); break;
       case 'browse': S.screen = 'browse'; S.err = ''; render(); window.scrollTo(0, 0); break;
-      case 'addmore': S.screen = 'browse'; S.err = ''; if (phone()) S.open = {}; S.open[w] = true; render(); scrollToEl(document.getElementById('card-' + w), phone() ? 8 : stickyH()); break;
+      case 'addmore': S.screen = 'browse'; S.err = ''; if (phone()) S.open = {}; S.open[w] = true; render(); scrollToEl(document.getElementById('card-' + w), stickyH()); break;
       case 'confirm':
         var T = totals();
         if (S.editing) send();

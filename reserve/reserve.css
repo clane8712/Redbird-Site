@@ -52,6 +52,11 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 /* Search, size chips and month tabs stay put under the site header while scrolling (desktop; phones don't show them) */
 .rbp-sticky { position: sticky; top: var(--hdr); z-index: 6; background: var(--bg); padding: 12px 0; margin-bottom: 4px; box-shadow: 0 1px 0 var(--line); }
 .rbp-sticky .rbp-tools { margin-bottom: 10px; }
+.rbp-sticky::before { content: ""; position: absolute; top: 0; bottom: 0; left: -24px; right: -24px; background: var(--bg); z-index: -1; }   /* covers card edges scrolling underneath */
+.rbp-sticky-ph { padding: 8px 0 10px; margin: 0 0 8px; box-shadow: none; }
+.rbp-seg { display: flex; gap: 2px; background: #FFFFFF; border: 1px solid rgba(0,0,0,0.12); border-radius: 999px; padding: 3px; }
+.rbp-seg button { flex: 1; height: 36px; border: 0; border-radius: 999px; background: transparent; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.rbp-seg button.on { background: var(--ink); color: #FFFFFF; }
 .rbp-month { height: 32px; padding: 0 14px; border-radius: 999px; border: 0; background: #FFFFFF; color: var(--ink); font-size: 13px; font-weight: 700; box-shadow: 0 0 0 1px var(--line); }
 .rbp-month.on { background: var(--red); color: #FFFFFF; box-shadow: none; }
 
