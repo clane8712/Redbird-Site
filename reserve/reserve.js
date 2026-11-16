@@ -38,7 +38,7 @@
     teaser: null, weeks: [], err: '',
     who: { name: '', email: '', account: '' }, accounts: [], internal: false,
     cart: {}, carts: {}, open: {}, sizes: {}, q: '', month: '',
-    submitted: null, editing: false, extra: [], notes: '', busy: false, menu: false, formStart: 0, mine: [], sentLink: {}
+    submitted: null, editing: false, extra: [], notes: '', busy: false, menu: false, formStart: 0, mine: [], sentLink: {}, collapsed: {}
   };
 
   // ───────── helpers ─────────
@@ -50,6 +50,9 @@
   function longDate(d) { var x = ymd(d); return DAYS[x.getDay()] + ', ' + MONTHS[x.getMonth()] + ' ' + x.getDate(); }
   function fullDate(d) { var x = ymd(d); return x.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }); }
   function monthOf(d) { return MONTHS[ymd(d).getMonth()]; }
+  function cents(n) { var r = Math.round(n * 100) / 100; return '$' + r.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }   // review + receipts: always cents so amounts line up
+  var TRASH = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+  var CHEV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
   function typePill(t) { var k = String(t || '').toLowerCase(); return /^(indica|sativa|hybrid)$/.test(k) ? '<span class="rbp-pill ' + k + '">' + esc(t) + '</span>' : ''; }
   function tag(status) { return status === 'confirmed' ? '<span class="rbp-tag conf">Confirmed</span>' : '<span class="rbp-tag proj">Projected</span>'; }
@@ -124,12 +127,14 @@
     var html = hero();
     if (S.mode === 'loading') html += main('<div class="rbp-loading"><span class="rbp-spin"></span>Loading upcoming harvests…</div>');
     else if (S.mode === 'out') html += main(signedOut()) + gateCard();
-    else if (S.screen === 'review') html += main(review(), 'rbp-review');
+    else if (S.screen === 'review') html += main(review(), 'rbp-review', true) + reviewBar();
     else if (S.screen === 'done') html += main(done(), 'rbp-review');
     else if (S.screen === 'cancelled') html += main(cancelled(), 'rbp-review');
     else html += main(browse(), '', totals().u > 0) + bar();
     root.innerHTML = html;
+    var b0 = document.getElementById('rbp-bar'); document.body.classList.toggle('rbp-has-bar', !!(b0 && !b0.hidden));   // footer gets room so the bar never covers it
     if (S.mode === 'in' && S.screen === 'browse') spy();
+    root.querySelectorAll('.rbp-rhead[data-act="collapse"]').forEach(function (x) { x.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); x.click(); } }; });
     root.querySelectorAll('.rbp-lock').forEach(function (x) { x.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focusGate(); } }; });
 
   }
@@ -314,40 +319,54 @@
   }
 
   // ── review ──
+  function weekMeta(id) { var t = weekTotals(id), n = Object.keys(S.cart[id] || {}).length; return plural(n, 'item') + ' · ' + plural(t.u, 'unit') + ' · ' + cents(t.d); }
   function review() {
     var weeks = cartWeeks();
-    var html = '<button type="button" class="rbp-back" data-act="browse">← Back to all weeks</button>';
+    var html = '<div class="rbp-col"><button type="button" class="rbp-back" data-act="browse">\u2190 Back to all weeks</button>';
     if (S.editing && S.submitted) {
       var keep = S.submitted.reservation.items.filter(function (i) { return i.locked; }).concat(S.extra || []);
       if (keep.length) html += '<p class="rbp-fine" style="margin:0 0 10px">These stay as reserved: weeks within 14 days are locked in, and strains no longer on the menu can\u2019t be changed here.</p><div class="rbp-weeks" style="margin-bottom:12px">' + resItemsHtml(keep) + '</div>';
     }
-    if (!weeks.length && !(S.editing && S.extra && S.extra.length)) return html + '<section class="rbp-card"><div class="rbp-empty">Nothing added yet. <button type="button" class="rbp-textlink" data-act="browse">Pick a week</button></div></section>';
+    if (!weeks.length && !(S.editing && S.extra && S.extra.length)) return html + '<section class="rbp-card"><div class="rbp-empty">Nothing added yet. <button type="button" class="rbp-textlink" data-act="browse">Pick a week</button></div></section></div>';
     html += '<div class="rbp-weeks">';
     weeks.forEach(function (w) {
-      var id = wid(w), c = S.cart[id], t = weekTotals(id);
-      html += '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span></div>' +
-        '<button type="button" class="rbp-textlink" data-act="addmore" data-w="' + id + '">+ Add more</button></div>';
-      SIZES.forEach(function (z) {
-        (w[z.sec] || []).forEach(function (s) {
-          var p = pid(w, s.n, z.k), n = c[p]; if (!n) return;
-          html += '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(s.n) + '</b>' + typePill(s.t) + '<div>' + z.sku + ' · ' + money(z.price) + ' each</div></div>' +
-            '<div class="rbp-ritem-ctl">' + qctl(id, p, z) + '<span class="rbp-line" data-line="' + p + '">' + money(n * z.price) + '</span>' +
-            '<button type="button" class="rbp-x" data-act="remove" data-w="' + id + '" data-p="' + p + '" aria-label="Remove">×</button></div></div>';
+      var id = wid(w), c = S.cart[id], t = weekTotals(id), shut = !!S.collapsed[id];
+      html += '<section class="rbp-card rbp-rcard' + (shut ? ' shut' : '') + '"><div class="rbp-rhead" data-act="collapse" data-w="' + id + '" role="button" tabindex="0" aria-expanded="' + !shut + '">' +
+        '<div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (shut ? '<small data-wmeta="' + id + '">' + weekMeta(id) + '</small>' : '') + '</div>' +
+        '<div class="rbp-rhead-side">' + (shut ? '' : '<button type="button" class="rbp-textlink" data-act="addmore" data-w="' + id + '">+ Add more</button>') +
+        '<span class="rbp-chev">' + CHEV + '</span></div></div>';
+      if (!shut) {
+        ['flower', 'pre'].forEach(function (sec) {
+          var rows = '';
+          SIZES.forEach(function (z) {
+            if (z.sec !== sec) return;
+            (w[z.sec] || []).forEach(function (st) {
+              var p = pid(w, st.n, z.k), n = c[p]; if (!n) return;
+              rows += '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(st.n) + '</b>' + typePill(st.t) + '<div>' + z.sku + ' · ' + money(z.price) + ' each</div></div>' +
+                '<div class="rbp-ritem-ctl">' + qctl(id, p, z) + '<span class="rbp-line" data-line="' + p + '">' + cents(n * z.price) + '</span>' +
+                '<button type="button" class="rbp-trash" data-act="remove" data-w="' + id + '" data-p="' + p + '" aria-label="Remove ' + esc(st.n) + ' ' + z.sku + '" title="Remove">' + TRASH + '</button></div></div>';
+            });
+          });
+          if (rows) html += '<div class="rbp-mono rbp-rsec">' + SEC_NAME[sec] + '</div>' + rows;
         });
-      });
-      html += '<div class="rbp-sub"><span>Week subtotal · <span data-wu="' + id + '">' + plural(t.u, 'unit') + '</span></span><b data-wt="' + id + '">' + money(t.d) + '</b></div></section>';
+        html += '<div class="rbp-wsub"><span>Week of ' + shortDate(w.d) + ' subtotal</span><span><i data-wu="' + id + '">' + plural(t.u, 'unit') + '</i><b data-wt="' + id + '">' + cents(t.d) + '</b></span></div>';
+      }
+      html += '</section>';
     });
-    var T = totals();
-    html += '<section class="rbp-card rbp-rcard"><div class="rbp-totals">' + weeks.map(function (w) {
-      return '<div class="rbp-tline"><span>Week of ' + shortDate(w.d) + '</span><span data-wt2="' + wid(w) + '">' + money(weekTotals(wid(w)).d) + '</span></div>';
-    }).join('') + '<div class="rbp-grand"><span>Total · <span data-tu>' + plural(T.u, 'unit') + '</span></span><span class="rbp-bebas" data-total>' + money(T.d) + '</span></div></div></section>';
+    html += '</div>';
     html += '<section class="rbp-card rbp-notes"><label for="rbp-notes">Order notes <span>(optional)</span></label><p>Anything the Redbird team should know: delivery instructions, store requests, special asks.</p>' +
       '<textarea id="rbp-notes" data-act="notes" placeholder="e.g. Deliver to the back door, ring the bell for the buyer">' + esc(S.notes) + '</textarea></section>';
-    html += '<div class="rbp-actions"><button type="button" class="rbp-btn" data-act="confirm"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Sending…' : S.editing ? 'Save changes' : 'Send reservation') + '</button>' +
-      (S.editing ? '<button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button>' : '') + '</div>' +
+    html += (S.editing ? '<div class="rbp-actions"><button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button></div>' : '') +
       (S.err ? '<div class="rbp-msg err" role="alert">' + esc(S.err) + '</div>' : '') +
-      '<p class="rbp-fine" style="margin-top:12px">Availability is first-come, first-served. Projected weeks can shift; we’ll confirm before delivery.</p>';
+      '<p class="rbp-fine" style="margin-top:12px">Availability is first-come, first-served. Projected weeks can shift; we\u2019ll confirm before delivery.</p>';
     return html + '</div>';
+  }
+
+  // Review: the total and the send button stay at the bottom of the screen.
+  function reviewBar() {
+    var T = totals();
+    return '<div class="rbp-bar" id="rbp-bar"><div><div><div class="rbp-bebas" data-total>' + cents(T.d) + '</div><small data-sub>' + plural(T.u, 'unit') + ' · ' + plural(T.w, 'week') + '</small></div>' +
+      '<button type="button" class="rbp-btn" data-act="confirm"' + (S.busy || !T.u && !(S.extra && S.extra.length) ? ' disabled' : '') + '>' + (S.busy ? 'Sending\u2026' : S.editing ? 'Save changes' : 'Send reservation') + '</button></div></div>';
   }
 
   function resWeeks(items) {
@@ -358,8 +377,8 @@
   function resItemsHtml(items, note) {
     return resWeeks(items).map(function (w) {
       return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (w.items[0].locked ? '<small>Locked in</small>' : '') + '</div>' + (note || '') + '</div>' +
-        w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.size) + ' · ' + it.qty + ' × ' + money(it.unitPrice) + '</div></div><span class="rbp-line">' + money(it.lineTotal) + '</span></div>'; }).join('') +
-        '<div class="rbp-sub"><span>Week subtotal · ' + plural(w.units, 'unit') + '</span><b>' + money(w.total) + '</b></div></section>';
+        w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.size) + ' · ' + it.qty + ' × ' + cents(it.unitPrice) + '</div></div><span class="rbp-line">' + cents(it.lineTotal) + '</span></div>'; }).join('') +
+        '<div class="rbp-wsub receipt"><span>Week of ' + shortDate(w.d) + ' subtotal</span><span><i>' + plural(w.units, 'unit') + '</i><b>' + cents(w.total) + '</b></span></div></section>';
     }).join('');
   }
 
@@ -371,7 +390,7 @@
     var html = '<div class="rbp-weeks"><section class="rbp-card"><div style="display:flex;gap:14px;align-items:center"><div class="rbp-check">' + (o.viewing ? '#' : '\u2713') + '</div><div><div class="rbp-bebas" style="font-size:30px;line-height:1">' + head + '</div>' +
       '<div class="rbp-meta">' + sub + '</div></div></div></section>';
     html += resItemsHtml(r.items);
-    html += '<section class="rbp-card rbp-rcard"><div class="rbp-totals"><div class="rbp-grand" style="border:0;margin:0;padding:0"><span>Total · ' + plural(r.units, 'unit') + '</span><span class="rbp-bebas">' + money(r.total) + '</span></div></div></section>';
+    html += '<section class="rbp-card rbp-rcard"><div class="rbp-totals"><div class="rbp-grand" style="border:0;margin:0;padding:0"><span>Total · ' + plural(r.units, 'unit') + '</span><span class="rbp-bebas">' + cents(r.total) + '</span></div></div></section>';
     if (r.notes) html += '<section class="rbp-card rbp-notes"><label>Order notes</label><p style="margin:0;white-space:pre-wrap">' + esc(r.notes) + '</p></section>';
     html += (changeable ? '<div class="rbp-actions"><button type="button" class="rbp-btn" data-act="edit">Change reservation</button><button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button></div>' +
       '<p class="rbp-fine">You can change or cancel each week until 14 days before that week. After that it\u2019s locked in; reply to your confirmation email or call your rep.</p>' : '') +
@@ -409,15 +428,16 @@
     var t = weekTotals(weekId), T = totals();
     var b = root.querySelector('[data-badge="' + weekId + '"]');
     if (b) { b.hidden = !t.u; b.textContent = t.u ? plural(t.u, 'unit') + ' · ' + money(t.d) : ''; }
-    var line = root.querySelector('[data-line="' + p + '"]'); if (line && pr) line.textContent = money(n * pr.size.price);
-    var wt = root.querySelector('[data-wt="' + weekId + '"]'); if (wt) wt.textContent = money(t.d);
+    var line = root.querySelector('[data-line="' + p + '"]'); if (line && pr) line.textContent = cents(n * pr.size.price);
+    var wt = root.querySelector('[data-wt="' + weekId + '"]'); if (wt) wt.textContent = cents(t.d);
     var wt2 = root.querySelector('[data-wt2="' + weekId + '"]'); if (wt2) wt2.textContent = money(t.d);
     var wu = root.querySelector('[data-wu="' + weekId + '"]'); if (wu) wu.textContent = plural(t.u, 'unit');
     var tu = root.querySelector('[data-tu]'); if (tu) tu.textContent = plural(T.u, 'unit');
-    root.querySelectorAll('[data-total]').forEach(function (el) { el.textContent = money(T.d); });
+    root.querySelectorAll('[data-total]').forEach(function (el) { el.textContent = S.screen === 'review' ? cents(T.d) : money(T.d); });
     var bar = document.getElementById('rbp-bar');
-    if (bar) {
-      bar.hidden = !T.u;
+    if (bar && S.screen === 'review') { bar.querySelector('[data-sub]').textContent = plural(T.u, 'unit') + ' · ' + plural(T.w, 'week'); }
+    else if (bar) {
+      bar.hidden = !T.u; document.body.classList.toggle('rbp-has-bar', !!T.u);
       bar.querySelector('[data-sub]').textContent = plural(T.u, 'unit') + ' · ' + plural(T.w, 'week');
       var m = root.querySelector('main.rbp-main'); if (m) m.classList.toggle('has-bar', T.u > 0);
     }
@@ -629,6 +649,7 @@
       case 'locked': ev.preventDefault(); focusGate(); break;
       case 'gate': S.gate = el.getAttribute('data-to'); S.err = ''; S.busy = false; if (S.gate === 'request') S.formStart = Date.now(); render(); focusGate2(); break;
       case 'toggle': ev.stopPropagation(); toggleWeek(w); break;
+      case 'collapse': if (ev.target.closest('[data-act="addmore"]')) break; S.collapsed[w] = !S.collapsed[w]; render(); break;
       case 'step':
         var q = el.closest('.rbp-q'); w = q.getAttribute('data-w'); p = q.getAttribute('data-p');
         setQty(w, p, qty(w, p) + (+el.getAttribute('data-d'))); refreshNumbers(w, p); break;
