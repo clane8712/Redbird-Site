@@ -103,7 +103,7 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 /* phone strain cards */
 .rbp-sec { font-size: 10.5px; font-weight: 700; color: var(--mute); margin: 14px 0 8px; }
 .rbp-sc { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
-.rbp-sc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.rbp-sc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 -12px 10px; padding: 0 12px 10px; border-bottom: 1px solid var(--line); }   /* thin line under the strain name */
 .rbp-sc-top b { font-size: 15px; }
 .rbp-sizerow { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; gap: 8px; }
 .rbp-sizerow > span { font-size: 13.5px; font-weight: 600; }
