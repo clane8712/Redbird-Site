@@ -147,7 +147,7 @@
     else if (S.screen === 'done' && S.submitted && S.submitted.viewing) { title = 'Your reservation'; sub = 'Change amounts or cancel any week that\u2019s still 14 or more days out.'; }
     else if (S.screen === 'done') { title = S.submitted && S.submitted.updated ? 'Changes saved' : 'Reservation sent'; sub = 'The Redbird team has it. We’ll be in touch to confirm delivery details.'; }
     else if (S.screen === 'cancelled') { title = 'Reservation cancelled'; sub = 'Your reserved quantities have been released.'; }
-    else sub = 'Pick a delivery week and add what you want to reserve. Buttons add by the case; you can type any number.';
+    else sub = 'Pick a week and add what you want to reserve. Buttons add by the case; you can type any number.';
     var who = '';
     if (S.mode === 'in') {
       var multi = S.accounts.length > 1;
