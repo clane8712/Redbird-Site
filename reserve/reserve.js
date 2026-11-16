@@ -223,7 +223,7 @@
   function byType(w) {
     var col = function (label, list) {
       return '<div class="rbp-bytype"><div class="rbp-mono">' + label + '</div><ul>' +
-        list.map(function (x) { return '<li>' + esc(x.n) + '</li>'; }).join('') + '</ul></div>';
+        list.map(function (x) { return '<li>' + esc(x.n) + typePill(x.t) + '</li>'; }).join('') + '</ul></div>';
     };
     var cols = '';
     if ((w.flower || []).length) cols += col('Flower &amp; Micro Buds', w.flower);
