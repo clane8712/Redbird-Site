@@ -232,8 +232,6 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
   .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) .rbp-card-title { flex-direction: column; align-items: flex-start; gap: 8px; }
   .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) > .rbp-preview { grid-column: 2; grid-row: 1; margin: 0; padding: 0 0 0 28px; border-top: 0; border-left: 1px solid var(--line);
     grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
-  .rbp-later { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
-  .rbp-later > .rbp-mono { grid-column: 1 / -1; }
 }
 @media (max-width: 720px) {
   .rbp-hero { padding: 32px 20px 8px; gap: 16px; }
