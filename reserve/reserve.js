@@ -211,13 +211,28 @@
     return html;
   }
 
+  // "4 flower · 3 pre-roll strains"
+  function typeCounts(w) {
+    var f = (w.flower || []).length, p = (w.pre || []).length, out = [];
+    if (f) out.push(f + ' flower');
+    if (p) out.push(p + ' pre-roll');
+    return out.join(' · ') + ' strain' + (f + p === 1 ? '' : 's');
+  }
+  // Closed week: strains split by product line so flower and pre-rolls never blur together
+  function byType(w) {
+    var rows = '';
+    if ((w.flower || []).length) rows += '<div class="rbp-bytype"><span class="rbp-mono">Flower &amp; Micro Buds</span><span>' + esc(w.flower.map(function (x) { return x.n; }).join(' · ')) + '</span></div>';
+    if ((w.pre || []).length) rows += '<div class="rbp-bytype"><span class="rbp-mono">Pre-rolls</span><span>' + esc(w.pre.map(function (x) { return x.n; }).join(' · ')) + '</span></div>';
+    return '<div class="rbp-preview">' + rows + '</div>';
+  }
+
   function weekHead(w, opts) {
     opts = opts || {};
     var id = wid(w), t = opts.out ? { u: 0 } : weekTotals(id);
     return '<div class="rbp-card-head' + (opts.click ? ' clickable' : '') + '"' + (opts.click ? ' data-act="toggle" data-w="' + id + '"' : '') + '>' +
       '<div style="min-width:0"><div class="rbp-card-title"><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + tag(w.status) + '</div>' +
-      '<div class="rbp-meta">' + plural(strainCount(w), 'strain') + ' · ' + types(w).join(' · ') + '</div>' +
-      (opts.preview ? '<div class="rbp-preview">' + esc(strainNames(w).join(' · ')) + '</div>' : '') + '</div>' +
+      '<div class="rbp-meta">' + (opts.out ? plural(strainCount(w), 'strain') + ' · ' + types(w).join(' · ') : typeCounts(w)) + '</div>' +
+      (opts.preview ? byType(w) : '') + '</div>' +
       '<div class="rbp-card-side"><span class="rbp-badge" data-badge="' + id + '"' + (t.u ? '' : ' hidden') + '>' + (t.u ? plural(t.u, 'unit') + ' · ' + money(t.d) : '') + '</span>' +
       (opts.out ? '' : '<button type="button" class="rbp-toggle' + (opts.open ? ' open' : '') + '" data-act="toggle" data-w="' + id + '" aria-expanded="' + !!opts.open + '">' + (opts.open ? 'Close ▴' : 'Open ▾') + '</button>') +
       '</div></div>';

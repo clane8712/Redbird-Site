@@ -59,7 +59,9 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 .rbp-card-title { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .rbp-card-title .rbp-bebas { font-size: 30px; line-height: 1; }
 .rbp-meta { font-size: 13.5px; color: var(--mute); margin-top: 6px; }
-.rbp-preview { font-size: 14px; margin-top: 8px; color: #333333; line-height: 1.5; }
+.rbp-preview { font-size: 14px; margin-top: 10px; color: #333333; line-height: 1.5; display: flex; flex-direction: column; gap: 6px; }
+.rbp-bytype { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: baseline; }
+.rbp-bytype .rbp-mono { font-size: 10.5px; font-weight: 700; color: var(--mute); }
 .rbp-card-side { display: flex; gap: 10px; align-items: center; }
 .rbp-badge { font-size: 13px; font-weight: 700; color: var(--red); background: #FDECEF; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
 .rbp-toggle { height: 38px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line); background: #FFFFFF; color: var(--ink); font-size: 14px; font-weight: 600; white-space: nowrap; }
@@ -212,6 +214,7 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
   .rbp-tools::-webkit-scrollbar { display: none; }
   .rbp-search { display: none; }
   .rbp-card { padding: 16px; }
+  .rbp-bytype { grid-template-columns: 1fr; gap: 2px; }
   .rbp-card.rbp-rcard { padding: 0; }
   .rbp-card-title .rbp-bebas { font-size: 28px; }
   .rbp-q button { width: 44px; }
