@@ -221,11 +221,16 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
 .rbp-modal p { margin: 0 0 18px; font-size: 15px; line-height: 1.5; color: var(--body); }
 .rbp-modal .rbp-actions { justify-content: flex-end; }
 
-/* Desktop: closed weeks sit two across so the page isn't a column of half-empty bars.
-   An open week takes the full row so its +/- grid has room. */
+/* Desktop: one week per row. A closed week reads left to right: week + tag | flower list | pre-roll list | Open.
+   Opening a week just expands that row, so nothing reflows around it. */
 @media (min-width: 960px) {
-  .rbp-weeks.rbp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: stretch; }
-  .rbp-weeks.rbp-grid > .rbp-card.is-open { grid-column: 1 / -1; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) { display: grid; grid-template-columns: 230px 1fr auto; column-gap: 28px; align-items: start; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) > .rbp-card-head { display: contents; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) > .rbp-card-head > div:first-child { grid-column: 1; grid-row: 1; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) .rbp-card-side { grid-column: 3; grid-row: 1; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) .rbp-card-title { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) > .rbp-preview { grid-column: 2; grid-row: 1; margin: 0; padding: 0 0 0 28px; border-top: 0; border-left: 1px solid var(--line);
+    grid-template-columns: repeat(2, minmax(0, 260px)); column-gap: 28px; }
   .rbp-later { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
   .rbp-later > .rbp-mono { grid-column: 1 / -1; }
 }
