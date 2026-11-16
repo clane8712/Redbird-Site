@@ -272,6 +272,7 @@
 
   // Search, size chips and month tabs. Signed out they look the same but every click goes to the sign-in card.
   function tools(weeks, locked) {
+    if (phone()) return legend();   // phones: no size chips / search / month tabs, keeps the page simple
     var L = locked ? ' data-act="locked"' : '';
     var html = '<div class="rbp-tools"><input class="rbp-search" type="search" placeholder="Search strains" aria-label="Search strains" value="' + (locked ? '' : esc(S.q)) + '"' + (locked ? ' readonly data-act="locked"' : ' data-act="search"') + '>';
     html += CHIPS.map(function (g) {
