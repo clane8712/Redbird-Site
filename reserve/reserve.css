@@ -150,13 +150,27 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 
 /* review / confirmation */
 .rbp-col { max-width: 880px; }   /* review + receipts: one readable column, lined up with the heading */
-main.rbp-main.rbp-review .rbp-weeks, main.rbp-main.rbp-review > .rbp-card, main.rbp-main.rbp-review > .rbp-actions, main.rbp-main.rbp-review > .rbp-fine, main.rbp-main.rbp-review > .rbp-msg { max-width: 880px; }
+/* review + receipt screens: heading, list and bottom bar share one centered column */
+.rbp-hero.narrow, main.rbp-main.rbp-review { max-width: 880px; }
+.rbp-bar.narrow > div { max-width: 880px; }
+.rbp-bar-btns { display: flex; gap: 10px; align-items: center; }
+.rbp-btn.ghost-dark { background: transparent; color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.45); }
+.rbp-btn.ghost-dark:hover { background: rgba(255,255,255,0.08); }
+.rbp-rtot { display: flex; align-items: baseline; gap: 14px; }
+.rbp-rtot i { font-style: normal; font-size: 14px; color: var(--mute); }
+.rbp-rtot b { font-size: 18px; min-width: 104px; text-align: right; font-variant-numeric: tabular-nums; }
+.rbp-addmore { margin-left: 14px; font-size: 14px; }
+.rbp-notecard { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 20px; }
+.rbp-notecard .rbp-mono { font-size: 10.5px; font-weight: 700; color: var(--mute); }
+.rbp-notecard p { margin: 4px 0 0; font-size: 15px; line-height: 1.5; white-space: pre-wrap; }
+.rbp-note-input { width: 100%; box-sizing: border-box; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 16px; background: #FAFAFA; resize: vertical; }
+.rbp-note-input:focus { outline: 2px solid var(--red); outline-offset: 0; background: #FFFFFF; }
 .rbp-rcard { padding: 0; overflow: hidden; }
 .rbp-rhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--line); }
 .rbp-rhead[data-act="collapse"] { cursor: pointer; user-select: none; }
 .rbp-rhead[data-act="collapse"]:hover { background: #FAFAFB; }
 .rbp-rhead-side { display: flex; align-items: center; gap: 14px; }
-.rbp-chev { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 8px; color: var(--ink); transition: transform .15s ease; transform: rotate(180deg); }
+.rbp-chev { display: inline-flex; width: 36px; height: 30px; align-items: center; justify-content: center; border-radius: 8px; color: var(--ink); transition: transform .15s ease; transform: rotate(180deg); }
 .rbp-rcard.shut .rbp-chev { transform: none; }
 .rbp-rcard.shut .rbp-rhead { border-bottom: 0; }
 .rbp-rsec { font-size: 10.5px; font-weight: 700; color: var(--mute); padding: 12px 20px 2px; }
@@ -205,6 +219,17 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
 .rbp-modal p { margin: 0 0 18px; font-size: 15px; line-height: 1.5; color: var(--body); }
 .rbp-modal .rbp-actions { justify-content: flex-end; }
 
+/* Desktop: closed weeks sit two across so the page isn't a column of half-empty bars.
+   An open week takes the full row so its +/- grid has room. */
+@media (min-width: 960px) {
+  .rbp-weeks.rbp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: stretch; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) .rbp-card-head { flex-wrap: nowrap; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) .rbp-card-side { flex-shrink: 0; }
+  .rbp-weeks.rbp-grid > .rbp-card.is-open { grid-column: 1 / -1; }
+  .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) .rbp-bytype { grid-template-columns: 150px 1fr; }
+  .rbp-later { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .rbp-later > .rbp-mono { grid-column: 1 / -1; }
+}
 @media (max-width: 720px) {
   .rbp-hero { padding: 32px 20px 8px; gap: 16px; }
   .rbp-hero h1 { font-size: 52px !important; }
@@ -227,6 +252,11 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
   .rbp-bar > div { padding: 12px 20px; }
   .rbp-rhead, .rbp-ritem, .rbp-sub, .rbp-totals, .rbp-wsub, .rbp-rsec { padding-left: 16px; padding-right: 16px; }
   .rbp-wsub b { min-width: 0; }
+  .rbp-rtot b { min-width: 0; font-size: 16px; }
+  .rbp-rtot { gap: 8px; }
+  .rbp-addmore { display: block; margin: 6px 0 0; }
+  .rbp-bar-btns .rbp-btn { height: 44px; padding: 0 14px; font-size: 14px; }
+  .rbp-bar .rbp-bebas { font-size: 22px; }
   .rbp-rcard .rbp-wsub { padding-right: 16px; }
   .rbp-line { min-width: 84px; }
   .rbp-ritem-ctl { width: 100%; justify-content: space-between; }

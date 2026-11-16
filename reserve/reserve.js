@@ -143,7 +143,7 @@
   function hero() {
     var title = 'Reserve upcoming harvests', sub;
     if (S.mode !== 'in') sub = 'Licensed Washington retailers can see what’s coming off the line each week and reserve it before it hits the menu.';
-    else if (S.screen === 'review') { title = S.editing ? 'Edit your reservation' : 'Review your reservation'; sub = 'Check quantities, add a note if you need to, then send it to the Redbird team.'; }
+    else if (S.screen === 'review') { title = S.editing ? 'Edit your reservation' : 'Review your reservation'; sub = 'Check quantities, add a note if you need one, then send it to the Redbird team.'; }
     else if (S.screen === 'done' && S.submitted && S.submitted.viewing) { title = 'Your reservation'; sub = 'Change amounts or cancel any week that\u2019s still 14 or more days out.'; }
     else if (S.screen === 'done') { title = S.submitted && S.submitted.updated ? 'Changes saved' : 'Reservation sent'; sub = 'The Redbird team has it. We’ll be in touch to confirm delivery details.'; }
     else if (S.screen === 'cancelled') { title = 'Reservation cancelled'; sub = 'Your reserved quantities have been released.'; }
@@ -158,7 +158,8 @@
           return '<button role="menuitem" data-act="store" data-i="' + i + '"><span>' + esc(a) + (i === 0 ? ' <small>primary</small>' : '') + '</span>' + (a === S.who.account ? '✓' : '') + '</button>';
         }).join('') + '</div>' : '') + '</div>';
     }
-    return '<section class="rbp-hero"><div class="rbp-hero-text"><div class="rbp-mono rbp-eyebrow">Retailer reservations</div>' +
+    var narrow = S.mode === 'in' && S.screen !== 'browse';
+    return '<section class="rbp-hero' + (narrow ? ' narrow' : '') + '"><div class="rbp-hero-text"><div class="rbp-mono rbp-eyebrow">Retailer reservations</div>' +
       '<h1 class="rbp-bebas">' + title + '</h1><p>' + sub + '</p></div>' + who + '</section>';
   }
 
@@ -312,9 +313,9 @@
       var v = visible(w);
       if (!v.flower && !v.pre) return '';
       var id = wid(w), open = !!S.open[id];
-      return '<section class="rbp-card" id="card-' + id + '" data-month="' + monthOf(w.d) + '">' + weekHead(w, { open: open, preview: !open, click: !open }) + (open ? grid(w, v, false) : '') + '</section>';
+      return '<section class="rbp-card' + (open ? ' is-open' : '') + '" id="card-' + id + '" data-month="' + monthOf(w.d) + '">' + weekHead(w, { open: open, preview: !open, click: !open }) + (open ? grid(w, v, false) : '') + '</section>';
     }).join('');
-    html += '<div class="rbp-weeks">' + (cards || '<section class="rbp-card"><div class="rbp-empty">No strains match. <button type="button" class="rbp-textlink" data-act="clear">Clear filters</button></div></section>') + '</div>';
+    html += '<div class="rbp-weeks rbp-grid">' + (cards || '<section class="rbp-card is-open"><div class="rbp-empty">No strains match. <button type="button" class="rbp-textlink" data-act="clear">Clear filters</button></div></section>') + '</div>';
     return html;
   }
 
@@ -348,8 +349,8 @@
     weeks.forEach(function (w) {
       var id = wid(w), c = S.cart[id], t = weekTotals(id), shut = !!S.collapsed[id];
       html += '<section class="rbp-card rbp-rcard' + (shut ? ' shut' : '') + '"><div class="rbp-rhead" data-act="collapse" data-w="' + id + '" role="button" tabindex="0" aria-expanded="' + !shut + '">' +
-        '<div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (shut ? '<small data-wmeta="' + id + '">' + weekMeta(id) + '</small>' : '') + '</div>' +
-        '<div class="rbp-rhead-side">' + (shut ? '' : '<button type="button" class="rbp-textlink" data-act="addmore" data-w="' + id + '">+ Add more</button>') +
+        '<div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (shut ? '' : '<button type="button" class="rbp-textlink rbp-addmore" data-act="addmore" data-w="' + id + '">+ Add more</button>') + '</div>' +
+        '<div class="rbp-rhead-side"><span class="rbp-rtot"><i data-wu="' + id + '">' + (shut ? plural(Object.keys(c).length, 'item') + ' · ' : '') + plural(t.u, 'unit') + '</i><b data-wt="' + id + '">' + cents(t.d) + '</b></span>' +
         '<span class="rbp-chev">' + CHEV + '</span></div></div>';
       if (!shut) {
         ['flower', 'pre'].forEach(function (sec) {
@@ -365,13 +366,11 @@
           });
           if (rows) html += '<div class="rbp-mono rbp-rsec">' + SEC_NAME[sec] + '</div>' + rows;
         });
-        html += '<div class="rbp-wsub"><span>Week of ' + shortDate(w.d) + ' subtotal</span><span><i data-wu="' + id + '">' + plural(t.u, 'unit') + '</i><b data-wt="' + id + '">' + cents(t.d) + '</b></span></div>';
       }
       html += '</section>';
     });
     html += '</div>';
-    html += '<section class="rbp-card rbp-notes"><label for="rbp-notes">Order notes <span>(optional)</span></label><p>Anything the Redbird team should know: delivery instructions, store requests, special asks.</p>' +
-      '<textarea id="rbp-notes" data-act="notes" placeholder="e.g. Deliver to the back door, ring the bell for the buyer">' + esc(S.notes) + '</textarea></section>';
+    if (S.notes.trim()) html += '<section class="rbp-card rbp-notecard"><div><span class="rbp-mono">Order note</span><p>' + esc(S.notes) + '</p></div><button type="button" class="rbp-textlink" data-act="note">Edit</button></section>';
     html += (S.editing ? '<div class="rbp-actions"><button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button></div>' : '') +
       (S.err ? '<div class="rbp-msg err" role="alert">' + esc(S.err) + '</div>' : '') +
       '<p class="rbp-fine" style="margin-top:12px">Availability is first-come, first-served. Projected weeks can shift; we\u2019ll confirm before delivery.</p>';
@@ -381,8 +380,27 @@
   // Review: the total and the send button stay at the bottom of the screen.
   function reviewBar() {
     var T = totals();
-    return '<div class="rbp-bar" id="rbp-bar"><div><div><div class="rbp-bebas" data-total>' + cents(T.d) + '</div><small data-sub>' + plural(T.u, 'unit') + ' · ' + plural(T.w, 'week') + '</small></div>' +
-      '<button type="button" class="rbp-btn" data-act="confirm"' + (S.busy || !T.u && !(S.extra && S.extra.length) ? ' disabled' : '') + '>' + (S.busy ? 'Sending\u2026' : S.editing ? 'Save changes' : 'Send reservation') + '</button></div></div>';
+    var hasNote = !!S.notes.trim();
+    return '<div class="rbp-bar narrow" id="rbp-bar"><div><div><div class="rbp-bebas" data-total>' + cents(T.d) + '</div><small data-sub>' + plural(T.u, 'unit') + ' · ' + plural(T.w, 'week') + '</small></div>' +
+      '<div class="rbp-bar-btns"><button type="button" class="rbp-btn ghost-dark" data-act="note">' + (hasNote ? '\u2713 Edit note' : '+ Add note') + '</button>' +
+      '<button type="button" class="rbp-btn" data-act="confirm"' + (S.busy || !T.u && !(S.extra && S.extra.length) ? ' disabled' : '') + '>' + (S.busy ? 'Sending\u2026' : S.editing ? 'Save changes' : 'Send reservation') + '</button></div></div></div>';
+  }
+
+  // Order note in a small window (opened from the bottom bar)
+  function noteBox() {
+    var m = document.createElement('div');
+    m.className = 'rbp-modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+    m.innerHTML = '<div><h3>Order note</h3><p>Anything the Redbird team should know: delivery instructions, store requests, special asks.</p>' +
+      '<textarea class="rbp-note-input" rows="4" placeholder="e.g. Deliver to the back door, ring the bell for the buyer">' + esc(S.notes) + '</textarea>' +
+      '<div class="rbp-actions" style="margin-top:14px"><button type="button" class="rbp-btn ghost" data-m="no">Cancel</button><button type="button" class="rbp-btn" data-m="yes">Save note</button></div></div>';
+    var ta = m.querySelector('textarea');
+    m.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-m]');
+      if (ev.target === m || (b && b.getAttribute('data-m') === 'no')) { m.remove(); return; }
+      if (b) { S.notes = ta.value.slice(0, 1000); m.remove(); render(); }
+    });
+    document.body.appendChild(m);
+    ta.focus();
   }
 
   function resWeeks(items) {
@@ -392,9 +410,10 @@
   }
   function resItemsHtml(items, note) {
     return resWeeks(items).map(function (w) {
-      return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (w.items[0].locked ? '<small>Locked in</small>' : '') + '</div>' + (note || '') + '</div>' +
+      return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (w.items[0].locked ? '<small>Locked in</small>' : '') + '</div>' +
+        '<div class="rbp-rhead-side"><span class="rbp-rtot"><i>' + plural(w.units, 'unit') + '</i><b>' + cents(w.total) + '</b></span></div></div>' +
         w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.size) + ' · ' + it.qty + ' × ' + cents(it.unitPrice) + '</div></div><span class="rbp-line">' + cents(it.lineTotal) + '</span></div>'; }).join('') +
-        '<div class="rbp-wsub receipt"><span>Week of ' + shortDate(w.d) + ' subtotal</span><span><i>' + plural(w.units, 'unit') + '</i><b>' + cents(w.total) + '</b></span></div></section>';
+        '</section>';
     }).join('');
   }
 
@@ -407,7 +426,7 @@
       '<div class="rbp-meta">' + sub + '</div></div></div></section>';
     html += resItemsHtml(r.items);
     html += '<section class="rbp-card rbp-rcard"><div class="rbp-totals"><div class="rbp-grand" style="border:0;margin:0;padding:0"><span>Total · ' + plural(r.units, 'unit') + '</span><span class="rbp-bebas">' + cents(r.total) + '</span></div></div></section>';
-    if (r.notes) html += '<section class="rbp-card rbp-notes"><label>Order notes</label><p style="margin:0;white-space:pre-wrap">' + esc(r.notes) + '</p></section>';
+    if (r.notes) html += '<section class="rbp-card rbp-notecard"><div><span class="rbp-mono">Order note</span><p>' + esc(r.notes) + '</p></div></section>';
     html += (changeable ? '<div class="rbp-actions"><button type="button" class="rbp-btn" data-act="edit">Change reservation</button><button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button></div>' +
       '<p class="rbp-fine">You can change or cancel each week until 14 days before that week. After that it\u2019s locked in; reply to your confirmation email or call your rep.</p>' : '') +
       (S.err ? '<div class="rbp-msg err" role="alert">' + esc(S.err) + '</div>' : '') +
@@ -447,7 +466,7 @@
     var line = root.querySelector('[data-line="' + p + '"]'); if (line && pr) line.textContent = cents(n * pr.size.price);
     var wt = root.querySelector('[data-wt="' + weekId + '"]'); if (wt) wt.textContent = cents(t.d);
     var wt2 = root.querySelector('[data-wt2="' + weekId + '"]'); if (wt2) wt2.textContent = money(t.d);
-    var wu = root.querySelector('[data-wu="' + weekId + '"]'); if (wu) wu.textContent = plural(t.u, 'unit');
+    var wu = root.querySelector('[data-wu="' + weekId + '"]'); if (wu) wu.textContent = (S.collapsed[weekId] ? plural(Object.keys(S.cart[weekId] || {}).length, 'item') + ' · ' : '') + plural(t.u, 'unit');
     var tu = root.querySelector('[data-tu]'); if (tu) tu.textContent = plural(T.u, 'unit');
     root.querySelectorAll('[data-total]').forEach(function (el) { el.textContent = S.screen === 'review' ? cents(T.d) : money(T.d); });
     var bar = document.getElementById('rbp-bar');
@@ -665,6 +684,7 @@
       case 'locked': ev.preventDefault(); focusGate(); break;
       case 'gate': S.gate = el.getAttribute('data-to'); S.err = ''; S.busy = false; if (S.gate === 'request') S.formStart = Date.now(); render(); focusGate2(); break;
       case 'toggle': ev.stopPropagation(); toggleWeek(w); break;
+      case 'note': noteBox(); break;
       case 'collapse': if (ev.target.closest('[data-act="addmore"]')) break; S.collapsed[w] = !S.collapsed[w]; render(); break;
       case 'step':
         var q = el.closest('.rbp-q'); w = q.getAttribute('data-w'); p = q.getAttribute('data-p');
