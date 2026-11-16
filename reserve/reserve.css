@@ -62,8 +62,8 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 .rbp-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); cursor: pointer; }
 .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) .rbp-card-head { flex-wrap: nowrap; }   /* Open stays top-right, phone too */
 .rbp-weeks.rbp-grid > .rbp-card:not(.is-open) .rbp-card-side { flex-shrink: 0; }
-.rbp-bytype li { display: flex; align-items: center; gap: 8px; min-height: 29px; }
-.rbp-bytype ul { list-style: none; margin: 0; padding: 0; font-size: 14.5px; line-height: 1.3; color: #1A1A1A; }
+.rbp-bytype ul { list-style: none; margin: 0; padding: 0; font-size: 14.5px; line-height: 1.75; color: #1A1A1A; }
+.rbp-bytype + .rbp-bytype { border-left: 1px solid var(--line); padding-left: 20px; }   /* thin line between flower and pre-rolls */
 .rbp-bytype .rbp-mono { font-size: 10.5px; font-weight: 700; color: var(--mute); margin-bottom: 4px; }
 .rbp-card-side { display: flex; gap: 10px; align-items: center; }
 .rbp-badge { font-size: 13px; font-weight: 700; color: var(--red); background: #FDECEF; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
@@ -236,9 +236,6 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
   .rbp-later > .rbp-mono { grid-column: 1 / -1; }
 }
 @media (max-width: 720px) {
-  .rbp-bytype .rbp-pill { display: none; }   /* phone stays a plain list */
-  .rbp-bytype li { min-height: 0; }
-  .rbp-bytype ul { line-height: 1.75; }
   .rbp-hero { padding: 32px 20px 8px; gap: 16px; }
   .rbp-hero h1 { font-size: 52px !important; }
   main.rbp-main { padding: 8px 20px 48px; }
@@ -272,6 +269,9 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
 
 /* signed out: every week card and row opens the sign-in card */
 .rbp-out, .rbp-lock { cursor: pointer; }
+.rbp-later-label { font-size: 10.5px; font-weight: 700; color: var(--mute); margin: 22px 0 8px; }
+.rbp-lockcard:hover { border-color: rgba(0,0,0,0.16); }
+.rbp-lockicon { display: inline-flex; padding: 10px 8px; }
 .rbp-lock:hover { border-color: rgba(0,0,0,0.16); }
 .rbp-tools [data-act="locked"] { cursor: pointer; }
 

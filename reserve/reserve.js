@@ -135,7 +135,7 @@
     var b0 = document.getElementById('rbp-bar'); document.body.classList.toggle('rbp-has-bar', !!(b0 && !b0.hidden));   // footer gets room so the bar never covers it
     if (S.mode === 'in' && S.screen === 'browse') spy();
     root.querySelectorAll('.rbp-rhead[data-act="collapse"]').forEach(function (x) { x.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); x.click(); } }; });
-    root.querySelectorAll('.rbp-lock').forEach(function (x) { x.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focusGate(); } }; });
+    root.querySelectorAll('.rbp-lock, .rbp-lockcard').forEach(function (x) { x.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focusGate(); } }; });
 
   }
   function main(inner, cls, hasBar) { return '<main class="rbp-main' + (cls ? ' ' + cls : '') + (hasBar ? ' has-bar' : '') + '">' + inner + '</main>'; }
@@ -220,15 +220,15 @@
     return out.join(' · ') + ' strain' + (f + p === 1 ? '' : 's');
   }
   // Closed week: one column per product line, one strain per line, so flower and pre-rolls never blur together.
-  function byType(w) {
+  function byType(w, act) {
     var col = function (label, list) {
       return '<div class="rbp-bytype"><div class="rbp-mono">' + label + '</div><ul>' +
-        list.map(function (x) { return '<li>' + esc(x.n) + typePill(x.t) + '</li>'; }).join('') + '</ul></div>';
+        list.map(function (x) { return '<li>' + esc(x.n) + '</li>'; }).join('') + '</ul></div>';
     };
     var cols = '';
     if ((w.flower || []).length) cols += col('Flower &amp; Micro Buds', w.flower);
     if ((w.pre || []).length) cols += col('Pre-rolls', w.pre);
-    return '<div class="rbp-preview" data-act="toggle" data-w="' + wid(w) + '">' + cols + '</div>';
+    return '<div class="rbp-preview" data-act="' + (act || 'toggle') + '" data-w="' + wid(w) + '">' + cols + '</div>';
   }
 
   function weekHead(w, opts) {
@@ -238,6 +238,7 @@
       '<div style="min-width:0"><div class="rbp-card-title"><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + tag(w.status) + '</div>' +
       (opts.preview ? '' : '<div class="rbp-meta">' + (opts.out ? plural(strainCount(w), 'strain') + ' · ' + types(w).join(' · ') : typeCounts(w)) + '</div>') + '</div>' +
       '<div class="rbp-card-side"><span class="rbp-badge" data-badge="' + id + '"' + (t.u ? '' : ' hidden') + '>' + (t.u ? plural(t.u, 'unit') + ' · ' + money(t.d) : '') + '</span>' +
+      (opts.lock ? '<span class="rbp-lockicon">' + LOCK_SVG + '</span>' : '') +
       (opts.out ? '' : '<button type="button" class="rbp-toggle' + (opts.open ? ' open' : '') + '" data-act="toggle" data-w="' + id + '" aria-expanded="' + !!opts.open + '">' + (opts.open ? 'Close ▴' : 'Open ▾') + '</button>') +
       '</div></div>';
   }
@@ -254,7 +255,12 @@
     html += '</div>';
     var rest = weeks.slice(w2 ? 2 : 1);
     if (rest.length) {
-      html += '<div class="rbp-later"><div class="rbp-mono">Also coming up</div>' + rest.map(function (w) {
+      // Later weeks look like the signed-in list (week | flower | pre-rolls) with a lock where Open would be.
+      var named = rest.some(function (w) { return (w.flower || []).length || (w.pre || []).length; });
+      if (named) html += '<div class="rbp-later-label rbp-mono">Also coming up</div><div class="rbp-weeks rbp-grid">' + rest.map(function (w) {
+        return '<section class="rbp-card rbp-out rbp-lockcard" data-act="locked" role="button" tabindex="0">' + weekHead(w, { out: true, preview: true, lock: true }) + byType(w, 'locked') + '</section>';
+      }).join('') + '</div>';
+      else html += '<div class="rbp-later"><div class="rbp-mono">Also coming up</div>' + rest.map(function (w) {
         return '<div class="rbp-lock" data-act="locked" role="button" tabindex="0"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + tag(w.status) + '<span class="rbp-meta">' + types(w).join(' · ') + '</span></div>' + LOCK_SVG + '</div>';
       }).join('') + '</div>';
     }
