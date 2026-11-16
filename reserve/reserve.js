@@ -219,14 +219,16 @@
     if (p) out.push(p + ' pre-roll');
     return out.join(' · ') + ' strain' + (f + p === 1 ? '' : 's');
   }
-  // Closed week: strains split by product line so flower and pre-rolls never blur together
+  // Closed week: one column per product line, one strain per line, so flower and pre-rolls never blur together.
   function byType(w) {
-    var rows = '';
-    // Each strain name stays whole; the dot rides on the end of the name before it, so no line starts with one.
-    var names = function (list) { return list.map(function (x) { return '<span class="rbp-sn">' + esc(x.n) + '</span>'; }).join(' '); };
-    if ((w.flower || []).length) rows += '<div class="rbp-bytype"><span class="rbp-mono">Flower &amp; Micro Buds</span><span>' + names(w.flower) + '</span></div>';
-    if ((w.pre || []).length) rows += '<div class="rbp-bytype"><span class="rbp-mono">Pre-rolls</span><span>' + names(w.pre) + '</span></div>';
-    return '<div class="rbp-preview">' + rows + '</div>';
+    var col = function (label, list) {
+      return '<div class="rbp-bytype"><div class="rbp-mono">' + label + '</div><ul>' +
+        list.map(function (x) { return '<li>' + esc(x.n) + '</li>'; }).join('') + '</ul></div>';
+    };
+    var cols = '';
+    if ((w.flower || []).length) cols += col('Flower &amp; Micro Buds', w.flower);
+    if ((w.pre || []).length) cols += col('Pre-rolls', w.pre);
+    return '<div class="rbp-preview" data-act="toggle" data-w="' + wid(w) + '">' + cols + '</div>';
   }
 
   function weekHead(w, opts) {
@@ -234,8 +236,7 @@
     var id = wid(w), t = opts.out ? { u: 0 } : weekTotals(id);
     return '<div class="rbp-card-head' + (opts.click ? ' clickable' : '') + '"' + (opts.click ? ' data-act="toggle" data-w="' + id + '"' : '') + '>' +
       '<div style="min-width:0"><div class="rbp-card-title"><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + tag(w.status) + '</div>' +
-      '<div class="rbp-meta">' + (opts.out ? plural(strainCount(w), 'strain') + ' · ' + types(w).join(' · ') : typeCounts(w)) + '</div>' +
-      (opts.preview ? byType(w) : '') + '</div>' +
+      (opts.preview ? '' : '<div class="rbp-meta">' + (opts.out ? plural(strainCount(w), 'strain') + ' · ' + types(w).join(' · ') : typeCounts(w)) + '</div>') + '</div>' +
       '<div class="rbp-card-side"><span class="rbp-badge" data-badge="' + id + '"' + (t.u ? '' : ' hidden') + '>' + (t.u ? plural(t.u, 'unit') + ' · ' + money(t.d) : '') + '</span>' +
       (opts.out ? '' : '<button type="button" class="rbp-toggle' + (opts.open ? ' open' : '') + '" data-act="toggle" data-w="' + id + '" aria-expanded="' + !!opts.open + '">' + (opts.open ? 'Close ▴' : 'Open ▾') + '</button>') +
       '</div></div>';
@@ -315,7 +316,7 @@
       var v = visible(w);
       if (!v.flower && !v.pre) return '';
       var id = wid(w), open = !!S.open[id];
-      return '<section class="rbp-card' + (open ? ' is-open' : '') + '" id="card-' + id + '" data-month="' + monthOf(w.d) + '">' + weekHead(w, { open: open, preview: !open, click: !open }) + (open ? grid(w, v, false) : '') + '</section>';
+      return '<section class="rbp-card' + (open ? ' is-open' : '') + '" id="card-' + id + '" data-month="' + monthOf(w.d) + '">' + weekHead(w, { open: open, preview: !open, click: !open }) + (open ? grid(w, v, false) : byType(w)) + '</section>';
     }).join('');
     html += '<div class="rbp-weeks rbp-grid">' + (cards || '<section class="rbp-card is-open"><div class="rbp-empty">No strains match. <button type="button" class="rbp-textlink" data-act="clear">Clear filters</button></div></section>') + '</div>';
     return html;
