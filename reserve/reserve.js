@@ -56,6 +56,9 @@
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
   function typePill(t) { var k = String(t || '').toLowerCase(); return /^(indica|sativa|hybrid)$/.test(k) ? '<span class="rbp-pill ' + k + '">' + esc(t) + '</span>' : ''; }
   function tag(status) { return status === 'confirmed' ? '<span class="rbp-tag conf">Confirmed</span>' : '<span class="rbp-tag proj">Projected</span>'; }
+  // Nov 17: each shop's own prices come from the Portal (per store); fall back to the list price.
+  function priceOf(z) { var p = S.prices && S.prices[S.who.account]; return (p && p[z.sku] > 0) ? p[z.sku] : z.price; }
+
   function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
   function stored(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function hdrHeight() { var h = document.querySelector('header'); var px = h ? h.offsetHeight : 74; document.documentElement.style.setProperty('--hdr', px + 'px'); return px; }
@@ -111,7 +114,7 @@
   }
   function weekTotals(weekId) {
     var u = 0, d = 0, c = S.cart[weekId] || {};
-    Object.keys(c).forEach(function (p) { var pr = product(weekId, p); if (pr) { u += c[p]; d += c[p] * pr.size.price; } });
+    Object.keys(c).forEach(function (p) { var pr = product(weekId, p); if (pr) { u += c[p]; d += c[p] * priceOf(pr.size); } });
     return { u: u, d: d };
   }
   function totals() {
@@ -198,12 +201,12 @@
           html += '<div class="rbp-sc"><div class="rbp-sc-top"><b>' + esc(s.n) + '</b>' + typePill(s.t) + '</div>' +
             (locked
               ? '<div class="rbp-sizechips"><div>' + g.sizes.map(function (z) { return '<span>' + z.col + '</span>'; }).join('') + '</div><button type="button" class="rbp-add" data-act="locked">+ Add</button></div>'
-              : g.sizes.map(function (z) { return '<div class="rbp-sizerow"><span>' + z.lab + ' <i>· ' + money(z.price) + '</i></span>' + qctl(id, pid(w, s.n, z.k), z) + '</div>'; }).join('')) + '</div>';
+              : g.sizes.map(function (z) { return '<div class="rbp-sizerow"><span>' + z.lab + ' <i>· ' + money(priceOf(z)) + '</i></span>' + qctl(id, pid(w, s.n, z.k), z) + '</div>'; }).join('')) + '</div>';
         });
         return;
       }
       html += '<table class="rbp-table"><thead><tr><th class="rbp-mono">' + SEC_NAME[sec] + '</th>' +
-        g.sizes.map(function (z) { return '<th>' + z.col + (locked ? '' : '<div class="rbp-per">' + money(z.price) + '/u</div>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        g.sizes.map(function (z) { return '<th>' + z.col + (locked ? '' : '<div class="rbp-per">' + money(priceOf(z)) + '/u</div>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
         g.list.map(function (s) {
           return '<tr><td><span class="rbp-name">' + esc(s.n) + '</span>' + typePill(s.t) + '</td>' +
             g.sizes.map(function (z) { return '<td>' + qctl(id, pid(w, s.n, z.k), z, locked) + '</td>'; }).join('') + '</tr>';
@@ -394,8 +397,8 @@
             if (z.sec !== sec) return;
             (w[z.sec] || []).forEach(function (st) {
               var p = pid(w, st.n, z.k), n = c[p]; if (!n) return;
-              rows += '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(st.n) + '</b>' + typePill(st.t) + '<div>' + z.sku + ' · ' + money(z.price) + ' each</div></div>' +
-                '<div class="rbp-ritem-ctl">' + qctl(id, p, z) + '<span class="rbp-line" data-line="' + p + '">' + cents(n * z.price) + '</span>' +
+              rows += '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(st.n) + '</b>' + typePill(st.t) + '<div>' + z.sku + ' · ' + money(priceOf(z)) + ' each</div></div>' +
+                '<div class="rbp-ritem-ctl">' + qctl(id, p, z) + '<span class="rbp-line" data-line="' + p + '">' + cents(n * priceOf(z)) + '</span>' +
                 '<button type="button" class="rbp-trash" data-act="remove" data-w="' + id + '" data-p="' + p + '" aria-label="Remove ' + esc(st.n) + ' ' + z.sku + '" title="Remove">' + TRASH + '</button></div></div>';
             });
           });
@@ -510,7 +513,7 @@
     var t = weekTotals(weekId), T = totals();
     var b = root.querySelector('[data-badge="' + weekId + '"]');
     if (b) { b.hidden = !t.u; b.textContent = t.u ? plural(t.u, 'unit') + ' · ' + money(t.d) : ''; }
-    var line = root.querySelector('[data-line="' + p + '"]'); if (line && pr) line.textContent = cents(n * pr.size.price);
+    var line = root.querySelector('[data-line="' + p + '"]'); if (line && pr) line.textContent = cents(n * priceOf(pr.size));
     root.querySelectorAll('[data-wt="' + weekId + '"]').forEach(function (x) { x.textContent = cents(t.d); });
     var wt2 = root.querySelector('[data-wt2="' + weekId + '"]'); if (wt2) wt2.textContent = money(t.d);
     root.querySelectorAll('[data-wu="' + weekId + '"]').forEach(function (x) { x.textContent = (S.collapsed[weekId] ? plural(Object.keys(S.cart[weekId] || {}).length, 'item') + ' · ' : '') + plural(t.u, 'unit'); });
@@ -599,7 +602,7 @@
     S.mode = 'loading'; render();
     return api({ action: 'weeks', email: S.who.email, acct: S.who.account }).then(function (r) {
       if (!r || !r.ok) throw new Error((r && r.error) || 'weeks');
-      S.weeks = r.weeks || []; S.mode = 'in'; S.screen = 'browse'; S.err = '';
+      S.weeks = r.weeks || []; S.prices = r.prices || {}; S.mode = 'in'; S.screen = 'browse'; S.err = '';
       S.month = S.weeks.length ? monthOf(S.weeks[0].d) : '';
       if (o.then) o.then(); else { render(); window.scrollTo(0, 0); }
       loadMine();
