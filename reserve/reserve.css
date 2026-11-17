@@ -4,7 +4,7 @@
 #rbp *, #rbp *::before, #rbp *::after { box-sizing: border-box; }
 #rbp button { font-family: inherit; cursor: pointer; }
 #rbp input, #rbp textarea { font-family: inherit; color: var(--ink); }
-#rbp .rbp-hero, #rbp .rbp-main, #rbp .rbp-bar > div { box-sizing: content-box; }   /* same edges as the site header */
+#rbp .rbp-hero, #rbp .rbp-main { box-sizing: content-box; }   /* same edges as the site header */
 .rbp-mono { font-family: 'Space Mono', monospace; letter-spacing: 1.2px; text-transform: uppercase; }
 .rbp-bebas { font-family: 'Bebas Neue', sans-serif; font-weight: 400; letter-spacing: 1px; }
 
@@ -25,7 +25,7 @@
 .rbp-test { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; color: #FFFFFF; background: var(--ink); padding: 3px 8px; border-radius: 4px; }
 
 main.rbp-main { max-width: 1200px; margin: 0 auto; padding: 8px 24px 72px; }
-main.rbp-main.has-bar { padding-bottom: 120px; }
+main.rbp-main.has-bar { padding-bottom: 24px; }
 
 /* tags + pills */
 .rbp-tag { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
@@ -158,8 +158,10 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 .rbp-empty { padding: 28px 22px; text-align: center; color: var(--body); font-size: 15px; line-height: 1.55; }
 
 /* bottom bar */
-.rbp-bar { border-top: 1px solid #2A2A2A; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--ink); color: #FFFFFF; padding-bottom: env(safe-area-inset-bottom); }
-.rbp-bar > div { max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+/* Nov 17: the total bar belongs to the order: it sticks to the bottom of the screen while you scroll the list,
+   then comes to rest under the last item instead of sitting on top of the footer */
+.rbp-bar { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 40; box-sizing: border-box; width: min(1200px, calc(100% - 48px)); margin: 0 auto 56px; border-radius: 14px; background: var(--ink); color: #FFFFFF; box-shadow: 0 14px 36px rgba(0,0,0,0.22); }
+.rbp-bar > div { max-width: none; margin: 0; padding: 14px 20px 14px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .rbp-bar .rbp-bebas { font-size: 26px; line-height: 1; }
 .rbp-bar small { display: block; font-size: 12.5px; color: #BDBDBD; margin-top: 2px; }
 
@@ -167,7 +169,7 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 .rbp-col { max-width: 880px; }   /* review + receipts: one readable column, lined up with the heading */
 /* review + receipt screens: heading, list and bottom bar share one centered column */
 .rbp-hero.narrow, main.rbp-main.rbp-review { max-width: 880px; }
-.rbp-bar.narrow > div { max-width: 880px; }
+.rbp-bar.narrow { width: min(880px, calc(100% - 48px)); }
 .rbp-bar-btns { display: flex; gap: 10px; align-items: center; }
 .rbp-btn.ghost-dark { background: transparent; color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.45); }
 .rbp-btn.ghost-dark:hover { background: rgba(255,255,255,0.08); }
@@ -200,7 +202,7 @@ main.rbp-main.has-bar { padding-bottom: 120px; }
 .rbp-wsub b { font-size: 17px; min-width: 104px; text-align: right; font-variant-numeric: tabular-nums; }
 .rbp-rcard .rbp-wsub { padding-right: 68px; }   /* subtotal lines up with the line amounts (trash column to its right) */
 .rbp-rcard .rbp-wsub.receipt { padding-right: 20px; }
-body.rbp-has-bar footer { padding-bottom: 80px; }
+
 .rbp-rhead .rbp-bebas { font-size: 26px; line-height: 1; }
 .rbp-rhead small { display: block; font-size: 13px; color: var(--mute); margin-top: 4px; }
 .rbp-ritem { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line); flex-wrap: wrap; }
@@ -254,7 +256,7 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
   .rbp-hero { padding: 32px 20px 8px; gap: 16px; }
   .rbp-hero h1 { font-size: 52px !important; }
   main.rbp-main { padding: 8px 20px 48px; }
-  main.rbp-main.has-bar { padding-bottom: 110px; }
+  main.rbp-main.has-bar { padding-bottom: 20px; }
   .rbp-tools { flex-wrap: nowrap; overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px 4px; scrollbar-width: none; }
   .rbp-tools::-webkit-scrollbar { display: none; }
   .rbp-search { display: none; }
@@ -268,7 +270,9 @@ body.rbp-has-bar footer { padding-bottom: 80px; }
   .rbp-lock .rbp-meta { grid-column: 1 / -1; }
   .rbp-gate { left: 12px; right: 12px; padding: 18px 16px; }
   .rbp-gate h2 { font-size: 26px; }
-  .rbp-bar > div { padding: 12px 20px; }
+  .rbp-bar, .rbp-bar.narrow { width: calc(100% - 24px); bottom: calc(8px + env(safe-area-inset-bottom)); margin-bottom: 32px; border-radius: 12px; }
+  .rbp-bar > div { padding: 12px 12px 12px 16px; gap: 10px; }
+  .rbp-bar-btns { gap: 8px; }
   .rbp-rhead, .rbp-ritem, .rbp-sub, .rbp-totals, .rbp-wsub, .rbp-rsec { padding-left: 16px; padding-right: 16px; }
   .rbp-wsub b { min-width: 0; }
   .rbp-rhead { flex-wrap: nowrap; }
