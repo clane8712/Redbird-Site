@@ -300,6 +300,24 @@ function capsToTitle_(t) {
       return { id: s.id || ('s' + i), name: s.name, address: tidyAddr_(s.address) || 'Address coming soon', city: capsToTitle_(s.city), county: s.county || 'Other', zip: s.zip || '',
                miles: s.next ? 'Next drop ' + fmt(s.next) : s.last ? 'Last drop ' + fmt(s.last) : '', dropColor: s.next ? '#C8102E' : '#767676' };
     }));
+    // Nov 16: recent drops by shop for the Drops page (last 30 days of feed.where, newest first)
+    // each shop id -> [[date, [flower & micro strains], [pre-roll strains]], ...]
+    var RECENT = {}, asOf = f.asOf || '';
+    var dayAdd = function (k, n) { var p = k.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2] + n); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); };
+    var recentFrom = asOf ? dayAdd(asOf, -30) : '';
+    Object.keys(f.where || {}).forEach(function (n) {
+      ((f.where[n] || {}).list || []).forEach(function (e) {
+        var s = shops[e[0]], d = e[1]; if (!s || !d || (recentFrom && d < recentFrom)) return;
+        var id = s.id || ('s' + e[0]), codes = String(e[3] || ''), byDay = RECENT[id] = RECENT[id] || {};
+        var g = byDay[d] = byDay[d] || { f: {}, p: {} };
+        if (/(^|;)[fm]:/.test(codes) || !codes) g.f[n] = 1;
+        if (/(^|;)p:/.test(codes)) g.p[n] = 1;
+      });
+    });
+    V.__RB_D_RECENT__ = js(Object.keys(RECENT).reduce(function (o, id) {
+      o[id] = Object.keys(RECENT[id]).sort().reverse().map(function (d) { var g = RECENT[id][d]; return [d, Object.keys(g.f).sort(), Object.keys(g.p).sort()]; });
+      return o;
+    }, {}));
     // One line per strain card: how many shops it's headed to (needs the newer feed with counts), else when it lands or harvests
     var dropLine = function (x) {
       for (var i = 0; i < land.length; i++) {
