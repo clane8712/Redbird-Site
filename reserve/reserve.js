@@ -147,7 +147,7 @@
     var title = 'Reserve upcoming harvests', sub;
     if (S.mode !== 'in') sub = 'Licensed Washington retailers can see what’s coming off the line each week and reserve it before it hits the menu.';
     else if (S.screen === 'review') { title = S.editing ? 'Edit your reservation' : 'Review your reservation'; sub = 'Check quantities, add a note if you need one, then send it to the Redbird team.'; }
-    else if (S.screen === 'done' && S.submitted && S.submitted.viewing) { title = 'Your reservation'; sub = 'Change amounts or cancel any week that\u2019s still 14 or more days out.'; }
+    else if (S.screen === 'done' && S.submitted && S.submitted.viewing) { title = 'Your reservation'; sub = 'Change amounts or cancel here for any week 14 or more days out. For sooner weeks, just reach out to your rep.'; }
     else if (S.screen === 'done') { title = S.submitted && S.submitted.updated ? 'Changes saved' : 'Reservation sent'; sub = 'The Redbird team has it. We’ll be in touch to confirm delivery details.'; }
     else if (S.screen === 'cancelled') { title = 'Reservation cancelled'; sub = 'Your reserved quantities have been released.'; }
     else sub = 'Pick a week and add what you want to reserve. Buttons add by the case; you can type any number.';
@@ -363,7 +363,7 @@
     return '<section class="rbp-mine"><div class="rbp-mono">Your reservations</div>' + list.map(function (r) {
       var sent = S.sentLink[r.id];
       return '<div class="rbp-mine-row"><div><b>' + esc(r.id) + '</b><span class="rbp-meta">' + (S.accounts.length > 1 ? esc(r.store) + ' · ' : '') + 'Week' + (r.weeks.length > 1 ? 's' : '') + ' of ' + r.weeks.map(shortDate).join(', ') + ' · ' + plural(r.units, 'unit') + ' · ' + money(r.total) + '</span></div>' +
-        (r.changeable ? (sent ? '<span class="rbp-meta">Link sent to ' + esc(sent) + '</span>' : '<button type="button" class="rbp-textlink" data-act="resend" data-id="' + esc(r.id) + '">Email me the link to change it</button>') : '<span class="rbp-meta">Locked in</span>') + '</div>';
+        (r.changeable ? (sent ? '<span class="rbp-meta">Link sent to ' + esc(sent) + '</span>' : '<button type="button" class="rbp-textlink" data-act="resend" data-id="' + esc(r.id) + '">Email me the link to change it</button>') : '<span class="rbp-meta">Coming up soon \u00b7 your rep can help with changes</span>') + '</div>';
     }).join('') + '</section>';
   }
 
@@ -380,7 +380,7 @@
     var html = '<div class="rbp-col"><button type="button" class="rbp-back" data-act="browse">\u2190 Back to all weeks</button>';
     if (S.editing && S.submitted) {
       var keep = S.submitted.reservation.items.filter(function (i) { return i.locked; }).concat(S.extra || []);
-      if (keep.length) html += '<p class="rbp-fine" style="margin:0 0 10px">These stay as reserved: weeks within 14 days are locked in, and strains no longer on the menu can\u2019t be changed here.</p><div class="rbp-weeks" style="margin-bottom:12px">' + resItemsHtml(keep) + '</div>';
+      if (keep.length) html += '<p class="rbp-fine" style="margin:0 0 10px">These are already set: to change weeks coming up in the next two weeks, or strains no longer on the menu, just reach out to your Redbird rep.</p><div class="rbp-weeks" style="margin-bottom:12px">' + resItemsHtml(keep) + '</div>';
     }
     if (!weeks.length && !(S.editing && S.extra && S.extra.length)) return html + '<section class="rbp-card"><div class="rbp-empty">Nothing added yet. <button type="button" class="rbp-textlink" data-act="browse">Pick a week</button></div></section></div>';
     html += '<div class="rbp-weeks">';
@@ -460,7 +460,7 @@
   }
   function resItemsHtml(items, note) {
     return resWeeks(items).map(function (w) {
-      return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (w.items[0].locked ? '<small>Locked in</small>' : '') + '</div>' +
+      return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (w.items[0].locked ? '<small>Coming up soon</small>' : '') + '</div>' +
         '<div class="rbp-rhead-side">' + weekTotal(plural(w.units, 'unit'), cents(w.total)) + '</div></div>' +
         w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.size) + ' · ' + it.qty + ' × ' + cents(it.unitPrice) + '</div></div><span class="rbp-line">' + cents(it.lineTotal) + '</span></div>'; }).join('') +
         weekFoot(w.d, plural(w.units, 'unit'), cents(w.total)) + '</section>';
@@ -470,7 +470,7 @@
   function done() {
     var o = S.submitted, r = o.reservation, changeable = r.items.some(function (i) { return !i.locked; });
     var head = o.viewing ? esc(r.id) : o.updated ? 'Updated ' + esc(r.id) : 'Thanks, ' + esc(S.who.account);
-    var sub = o.viewing ? (changeable ? 'Weeks 14 or more days out can still be changed.' : 'Every week is within 14 days, so this one is locked in.')
+    var sub = o.viewing ? (changeable ? 'Weeks 14 or more days out can be changed here. For sooner weeks, just reach out to your rep.' : 'These weeks are coming up soon. To make a change, reply to your confirmation email or call your rep.')
       : 'Reservation ' + esc(r.id) + (r.email ? ' · a copy is on its way to ' + esc(r.email) : '');
     var html = '<div class="rbp-weeks"><section class="rbp-card"><div style="display:flex;gap:14px;align-items:center"><div class="rbp-check">' + (o.viewing ? '#' : '\u2713') + '</div><div><div class="rbp-bebas" style="font-size:30px;line-height:1">' + head + '</div>' +
       '<div class="rbp-meta">' + sub + '</div></div></div></section>';
@@ -478,7 +478,7 @@
     html += '<section class="rbp-card rbp-rcard"><div class="rbp-totals"><div class="rbp-grand" style="border:0;margin:0;padding:0"><span>Total · ' + plural(r.units, 'unit') + '</span><span class="rbp-bebas">' + cents(r.total) + '</span></div></div></section>';
     if (r.notes) html += '<section class="rbp-card rbp-notecard"><div><span class="rbp-mono">Order note</span><p>' + esc(r.notes) + '</p></div></section>';
     html += (changeable ? '<div class="rbp-actions"><button type="button" class="rbp-btn" data-act="edit">Change reservation</button><button type="button" class="rbp-btn ghost" data-act="askcancel">Cancel reservation</button></div>' +
-      '<p class="rbp-fine">You can change or cancel each week until 14 days before that week. After that it\u2019s locked in; reply to your confirmation email or call your rep.</p>' : '') +
+      '<p class="rbp-fine">You can change or cancel here up to 14 days before each week. Need a change after that? Reply to your confirmation email or call your rep. We\u2019re happy to help.</p>' : '') +
       (S.err ? '<div class="rbp-msg err" role="alert">' + esc(S.err) + '</div>' : '') +
       '<p class="rbp-fine"><button type="button" class="rbp-textlink" data-act="new">Start a new reservation</button></p></div>';
     return html;
@@ -486,7 +486,7 @@
 
   function cancelled() {
     var r = S.submitted && S.submitted.reservation, kept = r ? r.items : [];
-    return '<section class="rbp-card"><div class="rbp-empty">' + (kept.length ? 'We released the weeks you could still change. The weeks below are within 14 days and stay reserved.' : 'Reservation ' + esc(r ? r.id : '') + ' is cancelled and the amounts were released.') +
+    return '<section class="rbp-card"><div class="rbp-empty">' + (kept.length ? 'We cancelled the weeks you could change here. The weeks below are coming up soon; to change those, reply to your confirmation email or call your rep.' : 'Reservation ' + esc(r ? r.id : '') + ' is cancelled and the amounts were released.') +
       '<div style="margin-top:16px"><button type="button" class="rbp-btn" data-act="new">Start a new reservation</button></div></div></section>' + (kept.length ? '<div class="rbp-weeks" style="margin-top:12px">' + resItemsHtml(kept) + '</div>' : '');
   }
 
@@ -651,7 +651,7 @@
     return items;
   }
   var ERR = {
-    locked: 'Those weeks are within 14 days now, so they\u2019re locked in. Reply to your confirmation email or call your rep.',
+    locked: 'Those weeks are coming up soon, so changes go through your rep. Reply to your confirmation email or give them a call.',
     cancelled: 'This reservation was already cancelled.',
     not_found: 'We couldn\u2019t find that reservation. Use the link in your latest confirmation email.',
     empty: 'Those strains aren\u2019t on the menu for that week anymore. Go back and pick again.',
