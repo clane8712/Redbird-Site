@@ -280,6 +280,31 @@ function capsToTitle_(t) {
     V.__RB_H_SOON__ = js((w0 ? w0.strains.slice(0, 6) : []).map(function (n) { return [n, TYPE[n] || 'Hybrid']; }));
     var rot = lineup.filter(function (x) { return x.inFlower; }).slice().sort(byNext).slice(0, 6);
     V.__RB_H_ROT__ = js(rot.map(function (x) { return [x.name, x.type, x.genetics, x.breeder, slug(x.name)]; }));
+    // Nov 17: home "Seed to shelf" tracker (Beta → Grow → Harvest → Cure → Your hand), all live from the feed except the cure time
+    var MONO = "font-family: 'Space Mono', monospace; letter-spacing: 1.2px; text-transform: uppercase; ";
+    var BEB = "font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; line-height: 1; ";
+    var inFlowerN = lineup.filter(function (x) { return x.inFlower; }).length;
+    var nextH = (f.board || []).filter(function (b) { return b.next; })[0];
+    var shopsWk = w0 ? (w0.shops || (w0.counts ? Object.keys(w0.counts).length : 0)) : 0;
+    var stage = function (n, label, big, unit, sub, link) {
+      return '<div class="rbpipe-s"><div class="rbpipe-dot"></div><div style="' + MONO + 'font-size: 11px; color: #C8102E">' + n + ' · ' + label + '</div>' +
+        '<div style="' + BEB + 'font-size: 56px; margin-top: 10px">' + big + '</div><div style="' + BEB + 'font-size: 20px; color: #111111">' + unit + '</div>' +
+        '<div style="font-size: 14px; line-height: 1.55; color: #555555; margin-top: 8px">' + sub + '</div>' + (link || '') + '</div>';
+    };
+    var lk = function (href, t) { return '<a href="' + href + '" style="display: inline-block; margin-top: auto; padding-top: 12px; font-size: 14px; font-weight: 600; color: #C8102E; text-decoration: none">' + t + ' →</a>'; };
+    V.__RB_H_PIPE__ = '<style>.rbpipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px;position:relative;margin-top:28px}' +
+      '.rbpipe:before{content:"";position:absolute;left:6px;right:6px;top:6px;height:2px;background:linear-gradient(90deg,#111111,#C8102E)}' +
+      '.rbpipe-s{position:relative;padding-top:30px;display:flex;flex-direction:column}.rbpipe-dot{position:absolute;top:0;left:0;width:14px;height:14px;border-radius:50%;background:#C8102E;box-shadow:0 0 0 4px #FFFFFF}' +
+      '.rbpipe-s:first-child .rbpipe-dot{background:#111111}' +
+      '@media (max-width:900px){.rbpipe{grid-template-columns:1fr;gap:26px;padding-left:28px}.rbpipe:before{left:6px;right:auto;top:6px;bottom:6px;width:2px;height:auto;background:linear-gradient(180deg,#111111,#C8102E)}' +
+      '.rbpipe-s{padding-top:0}.rbpipe-dot{left:-28px;top:2px}}</style>' +
+      '<div class="rbpipe">' +
+      stage('01', 'Beta', String(beta.length), 'strains in Beta', 'Every strain starts here: we pop seeds and grow the phenos side by side.', lk('Beta.dc.html', 'See Beta')) +
+      stage('02', 'Grow', String(inFlowerN), 'strains in flower', 'High-pressure aeroponics in closed-environment rooms.', lk('Strains.dc.html', 'See the lineup')) +
+      stage('03', 'Harvest', nextH ? esc(fmt(nextH.date)).toUpperCase() : 'SOON', 'next harvest', nextH ? esc(nextH.strains.slice(0, 3).join(', ')) + (nextH.strains.length > 3 ? ' and more' : '') : 'Check the Strains page for dates.', lk('Strains.dc.html', 'See harvest dates')) +
+      stage('04', 'Cure', '~2 WK', 'dry &amp; cure', 'Every harvest dries and cures for about two weeks before it ships.') +
+      stage('05', 'Your hand', String(shopsWk || '—'), w0 && w0.thisWeek ? 'shops this week' : 'shops next drop', 'Drops shows which shops just got it, and alerts you when your strain lands.', lk('Drops.dc.html', 'See recent drops')) +
+      '</div>';
     V.__RB_H_ROTSUB__ = esc('The next ' + rot.length + ' strains coming out of the flower rooms.');
     V.__RB_H_SEEALL__ = esc('See all ' + lineup.length + ' →');
     V.__RB_H_BETA__ = beta.slice(0, 4).map(function (b) { return tree(betaCard(b), b.name); }).join('');   // Nov 5: home Beta tiles open the family tree
