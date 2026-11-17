@@ -515,19 +515,28 @@ function capsToTitle_(t) {
     var go = function () { if (feedReady && linksReady) { render(rendered); rendered = true; } };
     handleLinks(function () { linksReady = true; go(); });
     var useSnapshot = function () { if (feedReady) return; feedReady = true; label(SNAPSHOT, false); go(); };
+    // Nov 17: the last live data this browser saw (any tab, up to 2 weeks old) draws the page right away, so a slow feed
+    // never shows the old built-in snapshot. Under 30 minutes old it counts as current; older, the live feed redraws it.
     try {
-      var kept = JSON.parse(sessionStorage.getItem('rb_feed') || 'null');
-      if (kept && kept.f && kept.f.lineup && Date.now() - kept.t < 30 * 60e3) { window.RB_KEPT = true; VM = view(kept.f); window.RB_FEED = kept.f; feedReady = true; go(); }
+      var kept = null;
+      try { kept = JSON.parse(localStorage.getItem('rb_feed') || 'null'); } catch (e) {}
+      if (!kept) kept = JSON.parse(sessionStorage.getItem('rb_feed') || 'null');
+      if (kept && kept.f && kept.f.lineup && Date.now() - kept.t < 14 * 864e5) {
+        if (Date.now() - kept.t < 30 * 60e3) window.RB_KEPT = true;
+        VM = view(kept.f); window.RB_FEED = kept.f; feedReady = true; go();
+      }
     } catch (e) {}
     var timer = setTimeout(useSnapshot, 4000);
     if (!FEED_URL || typeof fetch !== 'function') { clearTimeout(timer); return useSnapshot(); }
     fetch(FEED_URL, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (f) {
       if (!f || !f.lineup || !f.lineup.length) throw new Error('empty feed');
-      try { sessionStorage.setItem('rb_feed', JSON.stringify({ t: Date.now(), f: f })); } catch (e) {}
+      var keep = JSON.stringify({ t: Date.now(), f: f });
+      try { sessionStorage.setItem('rb_feed', keep); } catch (e) {}
+      try { localStorage.setItem('rb_feed', keep); } catch (e) {}
       if (feedReady && window.RB_FEED === f) return;
       VM = view(f); window.RB_FEED = f; label(f, true);
       clearTimeout(timer);
-      if (feedReady) { if (linksReady && !window.RB_KEPT && !window.RB_TOUCHED) render(true); return; }   // arrived late: redraw with live data (not when the page opened with this visit's data)
+      if (feedReady) { if (linksReady && !window.RB_KEPT && !window.RB_TYPED) render(true); return; }   // arrived late: redraw with live data, keeping the scroll spot (not while someone is typing in a form)
       feedReady = true; go();
     }).catch(function () { clearTimeout(timer); useSnapshot(); });
   };
@@ -553,9 +562,11 @@ function capsToTitle_(t) {
       var l = document.getElementById('rb-loading'); if (l) l.style.display = 'none';
       var doc; try { doc = frame.contentDocument; } catch (e) { return; }
       if (!doc) return;
-      var touch = function () { window.RB_TOUCHED = true; };
-      ['input', 'keydown', 'pointerdown', 'focusin'].forEach(function (t) { doc.addEventListener(t, touch, true); });
-      try { frame.contentWindow.addEventListener('scroll', function () { if (frame.contentWindow.scrollY > 40) touch(); }, { passive: true }); } catch (e) {}
+      // Typing in a form blocks a late redraw (it would wipe what they typed); scrolling and clicking don't.
+      var typed = function (ev) { var t = ev.target; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) window.RB_TYPED = true; };
+      ['input', 'keydown', 'focusin'].forEach(function (t) { doc.addEventListener(t, typed, true); });
+      var y = window.RB_KEEP_Y; window.RB_KEEP_Y = 0;
+      if (y) { var tries = 0, back = function () { try { var w = frame.contentWindow; w.scrollTo(0, y); if (Math.abs(w.scrollY - y) > 2 && ++tries < 12) setTimeout(back, 100); } catch (e) {} }; back(); }
       doc.addEventListener('click', function (ev) {
         var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null; if (!a) return;
         var href = a.getAttribute('href') || '', m = href.match(/^([A-Za-z-]+)\.dc\.html(?:#([a-z0-9-]+))?$/);
@@ -565,7 +576,8 @@ function capsToTitle_(t) {
       }, true);
       doc.addEventListener('submit', function (ev) { ev.preventDefault(); }, true);
     });
-    var draw = function () {
+    var draw = function (again) {
+      if (again) { try { window.RB_KEEP_Y = frame.contentWindow.scrollY || 0; } catch (e) {} }   // redraw: come back to the same spot
       var src = window.RB_FILL(window.RB_PAGE);
       src = src.replace(/\/_blob\/([0-9a-f]{32})/g, function (m, id) { return EXT[id] ? P + 'img/' + id + EXT[id] : m; });
       var boot = '<script>window.__resources={};<\/script><script src="' + P + 'assets/runtime.js?v=' + V + '"><\/script>';
