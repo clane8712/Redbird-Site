@@ -630,6 +630,7 @@ function classify(feed) {
   var ok = false;
   try { ok = Number(localStorage.getItem(KEY) || 0) > Date.now(); } catch (e) {}
   if (/[?&]agecheck\b/.test(location.search)) ok = false;   // ?agecheck shows it again (for testing)
+  if (/[?&]unsub=/.test(location.search)) ok = true;         // Nov 18: an unsubscribe link from our emails never sits behind the age check
   if (ok) return;
   gate.hidden = false;
   var m = document.getElementById('rb-m'), d = document.getElementById('rb-d'), y = document.getElementById('rb-y');

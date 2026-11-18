@@ -385,6 +385,11 @@ function capsToTitle_(t) {
     var wh = f.where || {};
     Object.keys(wh).forEach(function (n) { addW(n, wh[n].type, wh[n].genetics, '', '', ''); });
     wList.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    // Nov 18: what "Follow X on Drops" can do for each strain: 'self' = it's on Drops' strain list (lineup / between runs),
+    // 'beta' = it's a Beta Bud strain (follow Beta Bud), '' = can't be followed right now (link says "Get drop alerts")
+    var fSelf = {}, fBeta = {};
+    lineup.forEach(function (x) { fSelf[x.name] = 1; }); between.forEach(function (x) { fSelf[x.name] = 1; }); beta.forEach(function (b) { fBeta[b.name] = 1; });
+    wList.forEach(function (w) { w.follow = fSelf[w.name] ? 'self' : fBeta[w.name] ? 'beta' : ''; });
     V.__RB_W_DATA__ = js({ strains: wList, where: wh,
       shops: shops.map(function (s) { return { id: s.id, name: s.name, address: s.address, city: s.city, zip: s.zip }; }) });
     V.__RB_D_CARDS__ = w0 ? ('<div style="background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden">' +
@@ -565,6 +570,8 @@ function capsToTitle_(t) {
       // Typing in a form blocks a late redraw (it would wipe what they typed); scrolling and clicking don't.
       var typed = function (ev) { var t = ev.target; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) window.RB_TYPED = true; };
       ['input', 'keydown', 'focusin'].forEach(function (t) { doc.addEventListener(t, typed, true); });
+      // Nov 18: on the sign-up pages a tap counts too (picking shops and strains is all taps): a late redraw would clear their picks
+      if (name === 'Drops' || name === 'Contact') doc.addEventListener('pointerdown', function (ev) { if (ev.target && ev.target.closest && ev.target.closest('button, a, label')) window.RB_TYPED = true; }, true);
       var y = window.RB_KEEP_Y; window.RB_KEEP_Y = 0;
       if (y) { var tries = 0, back = function () { try { var w = frame.contentWindow; w.scrollTo(0, y); if (Math.abs(w.scrollY - y) > 2 && ++tries < 12) setTimeout(back, 100); } catch (e) {} }; back(); }
       doc.addEventListener('click', function (ev) {
