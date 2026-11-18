@@ -198,7 +198,7 @@
       if (phone()) {
         html += '<div class="rbp-mono rbp-sec">' + SEC_NAME[sec] + '</div>';
         g.list.forEach(function (s) {
-          html += '<div class="rbp-sc"><div class="rbp-sc-top"><b>' + esc(s.n) + '</b>' + typePill(s.t) + '</div>' +
+          html += '<div class="rbp-sc"><div class="rbp-sc-top"><div><span class="rbp-mono rbp-sc-kind">' + SEC_NAME[sec] + '</span><b>' + esc(s.n) + '</b></div>' + typePill(s.t) + '</div>' +
             (locked
               ? '<div class="rbp-sizechips"><div>' + g.sizes.map(function (z) { return '<span>' + z.col + '</span>'; }).join('') + '</div><button type="button" class="rbp-add" data-act="locked">+ Add</button></div>'
               : g.sizes.map(function (z) { return '<div class="rbp-sizerow"><span>' + z.lab + ' <i>· ' + money(priceOf(z)) + '</i></span>' + qctl(id, pid(w, s.n, z.k), z) + '</div>'; }).join('')) + '</div>';
