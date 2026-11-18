@@ -94,6 +94,8 @@ main.rbp-main.has-bar { padding-bottom: 24px; }
 .rbp-name { font-weight: 700; font-size: 15px; margin-right: 8px; }
 
 /* qty control */
+/* Phones: quick taps on +/- were read as a double-tap and zoomed the page. This turns off double-tap zoom on the portal only; pinch-to-zoom still works. */
+html, .rbp-q, .rbp-q button, button { touch-action: manipulation; }
 .rbp-q { display: inline-flex; align-items: stretch; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); background: #FFFFFF; }
 .rbp-q button { width: 40px; height: 34px; border: 0; background: #FFFFFF; font-size: 12px; font-weight: 700; color: var(--ink); padding: 0; }
 .rbp-q button:hover { background: var(--bg); }
