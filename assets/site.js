@@ -303,7 +303,7 @@ function capsToTitle_(t) {
       stage('02', 'Grow', String(inFlowerN), 'strains in flower', 'High-pressure aeroponics in closed-environment rooms.', lk('Strains.dc.html', 'See the lineup')) +
       stage('03', 'Harvest', nextH ? esc(fmt(nextH.date)).toUpperCase() : 'SOON', 'next harvest', nextH ? esc(nextH.strains.slice(0, 3).join(', ')) + (nextH.strains.length > 3 ? ' and more' : '') : 'Check the Strains page for dates.', lk('Strains.dc.html', 'See harvest dates')) +
       stage('04', 'Cure', '~2 WK', 'dry &amp; cure', 'Every harvest dries and cures for about two weeks before it ships.') +
-      stage('05', 'Your hand', String(shopsWk || '—'), w0 && w0.thisWeek ? 'shops this week' : 'shops next drop', 'Drops shows which shops just got it, and alerts you when your strain lands.', lk('Drops.dc.html', 'See recent drops')) +
+      stage('05', 'Your hand', String(shopsWk || '—'), w0 && w0.thisWeek ? 'shops this week' : 'shops next drop', 'The Finder shows which shops just got it. Drops emails you when your strain lands.', lk('Where.dc.html', 'Open the Finder')) +
       '</div>';
     V.__RB_H_ROTSUB__ = esc('The next ' + rot.length + ' strains coming out of the flower rooms.');
     V.__RB_H_SEEALL__ = esc('See all ' + lineup.length + ' →');
@@ -386,7 +386,7 @@ function capsToTitle_(t) {
     Object.keys(wh).forEach(function (n) { addW(n, wh[n].type, wh[n].genetics, '', '', ''); });
     wList.sort(function (a, b) { return a.name.localeCompare(b.name); });
     V.__RB_W_DATA__ = js({ strains: wList, where: wh,
-      shops: shops.map(function (s) { return { name: s.name, address: s.address, city: s.city, zip: s.zip }; }) });
+      shops: shops.map(function (s) { return { id: s.id, name: s.name, address: s.address, city: s.city, zip: s.zip }; }) });
     V.__RB_D_CARDS__ = w0 ? ('<div style="background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden">' +
       '<div style="padding: 14px 20px; background: #C8102E; color: #FFFFFF; display: flex; justify-content: space-between; align-items: center">' +
       '<span style="font-family: \'Bebas Neue\', sans-serif; font-size: 22px; letter-spacing: 1.5px">' + (w0.thisWeek ? 'This week' : 'Week of ' + fmt(w0.week)) + '</span>' +
