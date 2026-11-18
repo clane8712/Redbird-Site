@@ -392,17 +392,17 @@
         '<span class="rbp-chev">' + CHEV + '</span></div></div>';
       if (!shut) {
         ['flower', 'pre'].forEach(function (sec) {
-          var rows = '';
           SIZES.forEach(function (z) {
             if (z.sec !== sec) return;
+            var rows = '';
             (w[z.sec] || []).forEach(function (st) {
               var p = pid(w, st.n, z.k), n = c[p]; if (!n) return;
-              rows += '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(st.n) + '</b>' + typePill(st.t) + '<div>' + z.sku + ' · ' + money(priceOf(z)) + ' each</div></div>' +
+              rows += '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(st.n) + '</b>' + typePill(st.t) + '</div>' +
                 '<div class="rbp-ritem-ctl">' + qctl(id, p, z) + '<span class="rbp-line" data-line="' + p + '">' + cents(n * priceOf(z)) + '</span>' +
                 '<button type="button" class="rbp-trash" data-act="remove" data-w="' + id + '" data-p="' + p + '" aria-label="Remove ' + esc(st.n) + ' ' + z.sku + '" title="Remove">' + TRASH + '</button></div></div>';
             });
+            if (rows) html += zhead(z.sku, money(priceOf(z))) + rows;
           });
-          if (rows) html += '<div class="rbp-mono rbp-rsec">' + SEC_NAME[sec] + '</div>' + rows;
         });
         html += weekFoot(w.d, plural(t.u, 'unit'), cents(t.d), id);
       }
@@ -453,6 +453,20 @@
     ta.focus();
   }
 
+  // Size heading inside a week: "3.5g Flower  $10.00 each"
+  function zhead(sku, price) { return '<div class="rbp-zhead"><b>' + esc(sku) + '</b><span>' + price + ' each</span></div>'; }
+  // A week's items by size, in menu order. The heading price is this shop's normal price for the size.
+  function bySize(items) {
+    var by = {}, order = [];
+    items.forEach(function (i) { if (!by[i.size]) { by[i.size] = []; order.push(i.size); } by[i.size].push(i); });
+    var rank = function (k) { for (var j = 0; j < SIZES.length; j++) if (SIZES[j].sku === k) return j; return 99; };
+    order.sort(function (a, b) { return rank(a) - rank(b); });
+    return order.map(function (k) {
+      var z = SIZES.filter(function (x) { return x.sku === k; })[0], list = by[k], usual;
+      if (z) usual = priceOf(z); else { var c = {}; list.forEach(function (i) { c[i.unitPrice] = (c[i.unitPrice] || 0) + 1; }); usual = +Object.keys(c).sort(function (a, b) { return c[b] - c[a]; })[0]; }
+      return { sku: k, usual: usual, items: list };
+    });
+  }
   function resWeeks(items) {
     var by = {}, order = [];
     items.forEach(function (i) { if (!by[i.week]) { by[i.week] = []; order.push(i.week); } by[i.week].push(i); });
@@ -462,7 +476,13 @@
     return resWeeks(items).map(function (w) {
       return '<section class="rbp-card rbp-rcard"><div class="rbp-rhead"><div><span class="rbp-bebas">Week of ' + shortDate(w.d) + '</span>' + (w.items[0].locked ? '<small>Coming up soon</small>' : '') + '</div>' +
         '<div class="rbp-rhead-side">' + weekTotal(plural(w.units, 'unit'), cents(w.total)) + '</div></div>' +
-        w.items.map(function (it) { return '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b><div>' + esc(it.size) + ' · ' + it.qty + ' × ' + cents(it.unitPrice) + '</div></div><span class="rbp-line">' + cents(it.lineTotal) + '</span></div>'; }).join('') +
+        bySize(w.items).map(function (g) {
+          return zhead(g.sku, money(g.usual)) + g.items.map(function (it) {
+            var odd = Math.round(it.unitPrice * 100) !== Math.round(g.usual * 100);
+            return '<div class="rbp-ritem rbp-ritem-sum"><div class="rbp-ritem-name"><b>' + esc(it.strain) + '</b>' + (odd ? '<div class="rbp-odd">' + money(it.unitPrice) + ' each</div>' : '') + '</div>' +
+              '<span class="rbp-sumq">Qty ' + it.qty + '</span><span class="rbp-line">' + cents(it.lineTotal) + '</span></div>';
+          }).join('');
+        }).join('') +
         weekFoot(w.d, plural(w.units, 'unit'), cents(w.total)) + '</section>';
     }).join('');
   }

@@ -319,3 +319,18 @@ main.rbp-main.has-bar { padding-bottom: 24px; }
 .rbp-mine-row b { font-size: 14px; margin-right: 8px; }
 .rbp-mine-row .rbp-meta { margin: 0; font-size: 13px; }
 .rbp-mine .rbp-textlink { font-size: 13px; }
+
+/* Review + sent: each week's items grouped by size under a small red label, with the price once */
+.rbp-zhead { display: flex; align-items: baseline; gap: 8px; margin: 0 20px; padding: 20px 0 2px; font-family: 'Space Mono', monospace; text-transform: uppercase; }
+.rbp-zhead b { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--red); }
+.rbp-zhead span { font-size: 11px; letter-spacing: 1px; color: var(--mute); }
+.rbp-zhead + .rbp-ritem { border-top: 0; }
+.rbp-ritem-sum { flex-wrap: nowrap; }
+.rbp-ritem-sum .rbp-ritem-name { flex: 1; }
+.rbp-sumq { font-size: 14px; color: var(--mute); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rbp-ritem-sum .rbp-line { min-width: 92px; }
+.rbp-odd { color: var(--red) !important; }   /* a strain priced differently from this shop's usual price for the size */
+@media (max-width: 720px) {
+  .rbp-zhead { margin: 0 16px; }
+  .rbp-ritem-sum .rbp-line { min-width: 76px; }
+}
