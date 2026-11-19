@@ -17,8 +17,7 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
   function img(name) {
     if (IMG[name]) return IMG[name];
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="693"><rect width="1200" height="693" fill="#F7F7F9"/>' +
-      '<rect x="40" y="520" width="700" height="110" fill="#C8102E"/><text x="70" y="598" font-family="Arial" font-weight="700" font-size="64" fill="#fff">' + esc(name) + '</text>' +
-      '<text x="70" y="140" font-family="Courier New" font-size="34" fill="#767676">LABEL IMAGE COMING</text></svg>';
+      '<text x="600" y="372" text-anchor="middle" font-family="Courier New, monospace" font-size="76" letter-spacing="8" fill="#9A9AA2">ART COMING</text></svg>';
     return ['data:image/svg+xml,' + encodeURIComponent(svg), 'label'];
   }
   var DPILL = { Indica: 'background: rgba(167,139,250,0.15); color: #C4B5FD', Sativa: 'background: rgba(251,191,36,0.15); color: #FCD34D', Hybrid: 'background: rgba(74,222,128,0.15); color: #86EFAC' };
