@@ -22,6 +22,8 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
     return ['data:image/svg+xml,' + encodeURIComponent(svg), 'label'];
   }
   var DPILL = { Indica: 'background: rgba(167,139,250,0.15); color: #C4B5FD', Sativa: 'background: rgba(251,191,36,0.15); color: #FCD34D', Hybrid: 'background: rgba(74,222,128,0.15); color: #86EFAC' };
+  // Nov 18: Beta Bud in flower shows its grow room ("Harvest · Nov 26 · GR4"). Blank rooms or out of flower = just the status.
+  function bst(b) { return b.status + (b.rooms && /^(harvest ·|in flower)/i.test(b.status || '') ? ' · ' + b.rooms : ''); }
   function betaCard(b) {
     return '<div style="background: #1C1C1E; border: 1px solid #2E2E31; border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">' +
       '<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">' +
@@ -29,7 +31,7 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
       '<span style="display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; ' + (DPILL[b.type] || DPILL.Hybrid) + '">' + esc(b.type) + '</span></div>' +
       '<div style="font-family: \'Bebas Neue\', sans-serif; font-size: 30px; letter-spacing: 1.5px; line-height: 1">' + esc(b.name) + '</div>' +
       '<div style="font-size: 13px; color: #A3A3A8">' + esc(b.genetics) + '</div>' +
-      '<div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #2E2E31; font-family: \'Space Mono\', monospace; font-size: 11px; text-transform: uppercase; color: #FF9AA8">' + esc(b.status) + '</div></div>';
+      '<div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #2E2E31; font-family: \'Space Mono\', monospace; font-size: 11px; text-transform: uppercase; color: #FF9AA8">' + esc(bst(b)) + '</div></div>';
   }
   // One rule site-wide: tapping a strain tile opens that strain in the family tree.
   function tree(html, name) {
@@ -53,7 +55,7 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
       '<span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; ' + (DPILL[b.type] || DPILL.Hybrid) + '">' + esc(b.type) + '</span></div>' +
       '<h3 style="margin: 12px 0 8px; font-family: \'Bebas Neue\', sans-serif; font-weight: 400; font-size: 36px; letter-spacing: 1px; line-height: 0.95; overflow-wrap: anywhere">' + esc(b.name) + '</h3>' +
       '<div style="color: #BDBDC6; font-size: 14.5px; line-height: 1.45; padding-bottom: 14px; border-bottom: 1px solid #2E2E31; flex: 1">' + esc(gen(b.genetics)) + '</div>' +
-      '<div style="display: flex; align-items: center; gap: 8px; padding-top: 14px; ' + MONO + '; font-size: 11.5px; color: #FF8597">' + esc(b.status) +
+      '<div style="display: flex; align-items: center; gap: 8px; padding-top: 14px; ' + MONO + '; font-size: 11.5px; color: #FF8597">' + esc(bst(b)) +
       (b.phenos > 1 ? '<span style="margin-left: auto; color: #C9C9D1; border: 1px solid #2E2E31; border-radius: 5px; padding: 1px 7px; font-size: 10.5px; white-space: nowrap">' + b.phenos + ' phenos</span>' : '') + '</div></div>';
   }
   function btHunt(h, asOf, back) {
@@ -100,7 +102,7 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
       '<span style="align-self: flex-start; font-family: \'Space Mono\', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; background: #C8102E; color: #FFFFFF">Beta Bud</span>' +
       '<div style="font-family: \'Bebas Neue\', sans-serif; font-size: 30px; letter-spacing: 1.5px; line-height: 1">' + esc(b.name) + '</div>' +
       '<div style="font-size: 13px; color: #A3A3A8">' + esc(b.type) + ' · ' + esc(b.genetics) + '</div>' +
-      '<div style="font-family: \'Space Mono\', monospace; font-size: 11px; text-transform: uppercase; color: #FF9AA8">' + esc(b.status) + '</div></div>';
+      '<div style="font-family: \'Space Mono\', monospace; font-size: 11px; text-transform: uppercase; color: #FF9AA8">' + esc(bst(b)) + '</div></div>';
   }
 
 // "12947 CASINO DR" / "ANACORTES" (some state records are all caps) -> "12947 Casino Dr" / "Anacortes"
