@@ -16,10 +16,41 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
   function js(v) { return JSON.stringify(v).replace(/</g, '\\u003c'); }
   function img(name) {
     if (IMG[name]) return IMG[name];
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="693"><rect width="1200" height="693" fill="#F7F7F9"/>' +
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="693" data-art="' + esc(name) + '"><rect width="1200" height="693" fill="#F7F7F9"/>' +
       '<text x="600" y="372" text-anchor="middle" font-family="Courier New, monospace" font-size="76" letter-spacing="8" fill="#9A9AA2">ART COMING</text></svg>';
     return ['data:image/svg+xml,' + encodeURIComponent(svg), 'label'];
   }
+  // Nov 19: a strain with no saved picture asks the feed for its new art in Drive (Art.gs in the website script).
+  // Nothing found, or anything goes wrong: the "Art coming" picture just stays. Answers are kept for the visit (3 hours).
+  var ARTQ = {};
+  function artFor(name, cb) {
+    var q = ARTQ[name], k = 'rb_art_' + name;
+    if (!q) {
+      q = ARTQ[name] = { cbs: [], done: false, src: '' };
+      var kept = null; try { kept = JSON.parse(sessionStorage.getItem(k) || 'null'); } catch (e) {}
+      if (kept && Date.now() - kept.t < 3 * 3600e3) { q.done = true; q.src = kept.src; }
+      else fetch(FEED_URL + '?art=' + encodeURIComponent(name)).then(function (r) { return r.json(); }).then(function (a) {
+        q.src = a && a.ok && /^data:image\/(jpeg|png|webp);base64,/.test(a.src || '') ? a.src : '';
+        try { sessionStorage.setItem(k, JSON.stringify({ t: Date.now(), src: q.src })); } catch (e) {}
+      }).catch(function () {}).then(function () { q.done = true; var c = q.cbs; q.cbs = []; c.forEach(function (f) { f(q.src); }); });
+    }
+    if (q.done) cb(q.src); else q.cbs.push(cb);
+  }
+  window.RB_ART_FILL = function (doc) {
+    if (!FEED_URL || typeof fetch !== 'function' || !doc) return;
+    var fill = function () {
+      Array.prototype.forEach.call(doc.querySelectorAll('img[src^="data:image/svg+xml"]'), function (el) {
+        if (el.getAttribute('data-art-asked')) return;
+        var m = decodeURIComponent(el.getAttribute('src') || '').match(/data-art="([^"]+)"/); if (!m) return;
+        el.setAttribute('data-art-asked', '1');
+        var name = m[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+        artFor(name, function (src) { if (!src) return; el.src = src; el.style.objectFit = 'contain'; el.style.background = '#FFFFFF'; });
+      });
+    };
+    fill();
+    var t = 0;                                                  // pages that draw (or redraw) their cards after loading
+    try { new MutationObserver(function () { clearTimeout(t); t = setTimeout(fill, 150); }).observe(doc.documentElement, { childList: true, subtree: true }); } catch (e) {}
+  };
   var DPILL = { Indica: 'background: rgba(167,139,250,0.15); color: #C4B5FD', Sativa: 'background: rgba(251,191,36,0.15); color: #FCD34D', Hybrid: 'background: rgba(74,222,128,0.15); color: #86EFAC' };
   // Nov 18: Beta Bud in flower shows its grow room ("Harvest · Nov 26 · GR4"). Blank rooms or out of flower = just the status.
   function bst(b) { return b.status + (b.rooms && /^(harvest ·|in flower)/i.test(b.status || '') ? ' · ' + b.rooms : ''); }
@@ -623,6 +654,7 @@ function capsToTitle_(t) {
         if (/^https?:/.test(href) && !a.target) { ev.preventDefault(); location.href = href; }   // outside links leave the frame
       }, true);
       doc.addEventListener('submit', function (ev) { ev.preventDefault(); }, true);
+      if (window.RB_ART_FILL) window.RB_ART_FILL(doc);   // Nov 19: new strain art from Drive fills in "Art coming" pictures
     });
     var draw = function (again) {
       if (again) { try { window.RB_KEEP_Y = frame.contentWindow.scrollY || 0; } catch (e) {} }   // redraw: come back to the same spot
