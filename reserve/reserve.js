@@ -54,6 +54,8 @@
   var TRASH = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
   var CHEV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+  // Nov 19: Beta Bud strains (new genetics in small runs) get a small red tag, same as on the website
+  function betaTag(x) { return x && x.b ? '<span class="rbp-beta">Beta Bud</span>' : ''; }
   function typePill(t) { var k = String(t || '').toLowerCase(); return /^(indica|sativa|hybrid)$/.test(k) ? '<span class="rbp-pill ' + k + '">' + esc(t) + '</span>' : ''; }
   function tag(status) { return status === 'confirmed' ? '<span class="rbp-tag conf">Confirmed</span>' : '<span class="rbp-tag proj">Projected</span>'; }
   // Nov 17: each shop's own prices come from the Portal (per store); fall back to the list price.
@@ -198,7 +200,7 @@
       if (phone()) {
         html += '<div class="rbp-mono rbp-sec">' + SEC_NAME[sec] + '</div>';
         g.list.forEach(function (s) {
-          html += '<div class="rbp-sc"><div class="rbp-sc-top"><div><span class="rbp-mono rbp-sc-kind">' + SEC_NAME[sec] + '</span><b>' + esc(s.n) + '</b></div>' + typePill(s.t) + '</div>' +
+          html += '<div class="rbp-sc"><div class="rbp-sc-top"><div><span class="rbp-mono rbp-sc-kind">' + SEC_NAME[sec] + '</span><b>' + esc(s.n) + '</b>' + betaTag(s) + '</div>' + typePill(s.t) + '</div>' +
             (locked
               ? '<div class="rbp-sizechips"><div>' + g.sizes.map(function (z) { return '<span>' + z.col + '</span>'; }).join('') + '</div><button type="button" class="rbp-add" data-act="locked">+ Add</button></div>'
               : g.sizes.map(function (z) { return '<div class="rbp-sizerow"><span>' + z.lab + ' <i>· ' + money(priceOf(z)) + '</i></span>' + qctl(id, pid(w, s.n, z.k), z) + '</div>'; }).join('')) + '</div>';
@@ -208,7 +210,7 @@
       html += '<table class="rbp-table"><thead><tr><th class="rbp-mono">' + SEC_NAME[sec] + '</th>' +
         g.sizes.map(function (z) { return '<th>' + z.col + (locked ? '' : '<div class="rbp-per">' + money(priceOf(z)) + '/u</div>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
         g.list.map(function (s) {
-          return '<tr><td><span class="rbp-name">' + esc(s.n) + '</span>' + typePill(s.t) + '</td>' +
+          return '<tr><td><span class="rbp-name">' + esc(s.n) + '</span>' + betaTag(s) + typePill(s.t) + '</td>' +
             g.sizes.map(function (z) { return '<td>' + qctl(id, pid(w, s.n, z.k), z, locked) + '</td>'; }).join('') + '</tr>';
         }).join('') + '</tbody></table>';
     });
@@ -226,7 +228,7 @@
   function byType(w, act, v) {
     var col = function (label, list) {
       return '<div class="rbp-bytype"><div class="rbp-mono">' + label + '</div><ul>' +
-        list.map(function (x) { return '<li>' + esc(x.n) + '</li>'; }).join('') + '</ul></div>';
+        list.map(function (x) { return '<li>' + esc(x.n) + betaTag(x) + '</li>'; }).join('') + '</ul></div>';
     };
     var cols = '';
     // v = what the filters leave showing (signed in); without it, list everything
@@ -397,7 +399,7 @@
             var rows = '';
             (w[z.sec] || []).forEach(function (st) {
               var p = pid(w, st.n, z.k), n = c[p]; if (!n) return;
-              rows += '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(st.n) + '</b>' + typePill(st.t) + '</div>' +
+              rows += '<div class="rbp-ritem"><div class="rbp-ritem-name"><b>' + esc(st.n) + '</b>' + betaTag(st) + typePill(st.t) + '</div>' +
                 '<div class="rbp-ritem-ctl">' + qctl(id, p, z) + '<span class="rbp-line" data-line="' + p + '">' + cents(n * priceOf(z)) + '</span>' +
                 '<button type="button" class="rbp-trash" data-act="remove" data-w="' + id + '" data-p="' + p + '" aria-label="Remove ' + esc(st.n) + ' ' + z.sku + '" title="Remove">' + TRASH + '</button></div></div>';
             });

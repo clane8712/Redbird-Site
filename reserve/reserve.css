@@ -35,6 +35,7 @@ main.rbp-main.has-bar { padding-bottom: 24px; }
 .rbp-pill.indica { color: #6D28D9; border: 1px solid #DDD3FA; background: #F6F3FF; }
 .rbp-pill.sativa { color: #B45309; border: 1px solid #F5D7B5; background: #FFF7EE; }
 .rbp-pill.hybrid { color: #15803D; border: 1px solid #C7EBD3; background: #F0FBF4; }
+.rbp-beta { display: inline-block; margin: 0 6px; font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #FFFFFF; background: #C8102E; border-radius: 4px; padding: 2px 6px; white-space: nowrap; vertical-align: 2px; }
 .rbp-legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--body); margin: 6px 0 14px; }
 .rbp-legend > span { display: inline-flex; gap: 8px; align-items: center; }
 
