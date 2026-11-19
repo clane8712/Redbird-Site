@@ -50,14 +50,14 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
   function days(a, b) { if (!a || !b) return 9999; var x = a.split('-'), y = b.split('-'); return (Date.UTC(+x[0], +x[1] - 1, +x[2]) - Date.UTC(+y[0], +y[1] - 1, +y[2])) / 864e5; }
   function btBeta(b) {
     return '<div data-b="sb" style="background: #1C1C1E; border: 1px solid #2E2E31; border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; min-width: 0">' +
-      // Nov 18: the pheno count sits up top next to the Beta Bud tag, so the red harvest line below always fits on one line
-      '<div style="display: flex; align-items: center; gap: 6px">' +
-      '<span style="' + MONO + '; font-size: 11px; background: #C8102E; color: #FFFFFF; border-radius: 4px; padding: 3px 8px; white-space: nowrap">Beta Bud</span>' +
+      // Nov 18: the pheno count sits up top, centered between the Beta Bud tag and the type, so the red harvest line below always fits on one line
+      '<div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px">' +
+      '<span style="justify-self: start; ' + MONO + '; font-size: 11px; background: #C8102E; color: #FFFFFF; border-radius: 4px; padding: 3px 8px; white-space: nowrap">Beta Bud</span>' +
       (b.phenos > 1 ? '<span style="' + MONO + '; color: #C9C9D1; border: 1px solid #2E2E31; border-radius: 5px; padding: 2px 7px; font-size: 10.5px; white-space: nowrap">' + b.phenos + ' phenos</span>' : '') +
-      '<span style="margin-left: auto; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; ' + (DPILL[b.type] || DPILL.Hybrid) + '">' + esc(b.type) + '</span></div>' +
+      '<span style="grid-column: 3; justify-self: end; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; ' + (DPILL[b.type] || DPILL.Hybrid) + '">' + esc(b.type) + '</span></div>' +
       '<h3 style="margin: 12px 0 8px; font-family: \'Bebas Neue\', sans-serif; font-weight: 400; font-size: 36px; letter-spacing: 1px; line-height: 0.95; overflow-wrap: anywhere">' + esc(b.name) + '</h3>' +
       '<div style="color: #BDBDC6; font-size: 14.5px; line-height: 1.45; padding-bottom: 14px; border-bottom: 1px solid #2E2E31; flex: 1">' + esc(gen(b.genetics)) + '</div>' +
-      '<div style="padding-top: 14px; ' + MONO + '; font-size: 11.5px; color: #FF8597; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">' + esc(bst(b)) + '</div></div>';
+      '<div style="flex-shrink: 0; padding-top: 14px; ' + MONO + '; font-size: 11.5px; color: #FF8597; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">' + esc(bst(b)) + '</div></div>';
   }
   function btHunt(h, asOf, back) {
     var ph = h.phenos || [], alive = ph.filter(function (p) { return p.alive; }), cut = ph.length - alive.length, seeds = h.seeds || 0;
