@@ -225,14 +225,26 @@ function capsToTitle_(t) {
     var out = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Today\'s Redbird strains and their parents" style="display: block; width: 100%; height: 100%; background: #0B0B10">' + stars +
       links.map(function (e) { return '<line x1="' + X(e.s) + '" y1="' + Y(e.s) + '" x2="' + X(e.t) + '" y2="' + Y(e.t) + '" stroke="' + (e.house ? '#7A2433' : '#3B3947') + '" stroke-width="' + (e.house ? 1.6 : 1) + '"/>'; }).join('');
     var txt = function (n, size, weight, color) { return '<text x="' + X(n) + '" y="' + (n.y * sc + oy + n.r * sc + size + 1).toFixed(1) + '" text-anchor="middle" font-family="\'DM Sans\', Helvetica, Arial, sans-serif" font-size="' + size + '" font-weight="' + weight + '" fill="' + color + '" stroke="#0B0B10" stroke-width="4" stroke-linejoin="round" paint-order="stroke">' + esc(n.id) + '</text>'; };
+    var big = [];
     nodes.slice().sort(function (a, b) { return (a.kind === 'today') - (b.kind === 'today'); }).forEach(function (n) {
       var r = (n.r * sc).toFixed(1);
       if (n.kind === 'outside') { out += '<circle cx="' + X(n) + '" cy="' + Y(n) + '" r="' + r + '" fill="#6D6A7A" stroke="#0B0B10" stroke-width="1.5"/>'; return; }
       if (n.kind === 'past') { out += '<circle cx="' + X(n) + '" cy="' + Y(n) + '" r="' + r + '" fill="#0B0B10" stroke="' + (TC[n.type] || '#B9B4C7') + '" stroke-width="2.2"/>' + txt(n, 11.5, 600, '#D9D6E2'); return; }
       if (n.flower) out += '<circle cx="' + X(n) + '" cy="' + Y(n) + '" r="' + ((n.r + 9) * sc).toFixed(1) + '" fill="#C8102E" opacity="0.18"/>';
       out += '<circle cx="' + X(n) + '" cy="' + Y(n) + '" r="' + r + '" fill="' + (TC[n.type] || TC.Hybrid) + '" stroke="' + (n.hunt ? '#FFFFFF' : '#0B0B10') + '" stroke-width="' + (n.hunt ? 1.6 : 2) + '"' + (n.hunt ? ' stroke-dasharray="2.5 2.5"' : '') + '/>' + txt(n, 13, 700, '#FFFFFF');
+      if (!n.hunt) big.push(n);
     });
-    return out + '</svg>';
+    // Nov 18: phones get today's strain names about 2.5x bigger. Biggest stars first; a name that would land on top of one
+    // already placed is skipped, so what shows is readable (the full tree has every name).
+    var placed = [], FS = 28;
+    big.sort(function (a, b) { return b.r - a.r || a.id.localeCompare(b.id); }).forEach(function (n) {
+      var w = n.id.length * FS * 0.56, x = +X(n), y = n.y * sc + oy + n.r * sc + FS + 2, bx = [x - w / 2 - 4, y - FS, x + w / 2 + 4, y + 6];
+      if (bx[0] < 0 || bx[2] > W || bx[3] > Hh) return;
+      if (placed.some(function (q) { return bx[0] < q[2] && bx[2] > q[0] && bx[1] < q[3] && bx[3] > q[1]; })) return;
+      placed.push(bx);
+      out += '<text data-m="1" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" font-family="\'DM Sans\', Helvetica, Arial, sans-serif" font-size="' + FS + '" font-weight="700" fill="#FFFFFF" stroke="#0B0B10" stroke-width="7" stroke-linejoin="round" paint-order="stroke">' + esc(n.id) + '</text>';
+    });
+    return out + '<style>[data-b="ct"] svg text[data-m]{display:none}@media (max-width:640px){[data-b="ct"] svg text[data-m]{display:inline}}</style></svg>';
   }
   function view(f) {
     f = fresh(f, dkey(new Date()));
