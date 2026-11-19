@@ -59,17 +59,17 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
   function btHunt(h, asOf, back) {
     var ph = h.phenos || [], alive = ph.filter(function (p) { return p.alive; }), cut = ph.length - alive.length, seeds = h.seeds || 0;
     var soon = h.nextFlower && days(h.nextFlower, asOf) <= 45;
-    var tag = back ? 'Back from seed' : (ph.length ? 'Hunting' : 'Growing out');
+    var tag = back ? 'Back from seed' : (ph.length ? 'Vetting' : 'Growing out');
     var br = back ? 'Last grown ' + h.grown + (seeds ? ' · ' + seeds + ' new seeds started ' + mon(h.germ) : h.germ ? ' · new seeds started ' + mon(h.germ) : '')
                   : [h.breeder, seeds ? seeds + ' seeds started ' + mon(h.germ) : h.germ ? 'started ' + mon(h.germ) : ''].filter(Boolean).join(' · ');
     var dots = '', note = '', st;
     if (ph.length) {
       var only = ph.length === 1 && ph[0].n === 'only';   // no pheno number = only one plant made it
-      dots = '<div data-b="dots">' + ph.map(function (p) { return '<i data-d="' + (p.alive ? 'a' : 'x') + '" title="' + (p.n === 'only' ? 'The only plant' : '#' + esc(p.n)) + (p.alive ? ' still in the hunt' : ' cut') + '"></i>'; }).join('') + '</div>';
+      dots = '<div data-b="dots">' + ph.map(function (p) { return '<i data-d="' + (p.alive ? 'a' : 'x') + '" title="' + (p.n === 'only' ? 'The only plant' : '#' + esc(p.n)) + (p.alive ? ' still being vetted' : ' cut') + '"></i>'; }).join('') + '</div>';
       if (only) st = 'One plant made it' + (seeds ? ' from ' + seeds + ' seeds' : '') +
                 (h.tested ? ' · test run harvested' : h.nextFlower ? ' · first test run flowers ' + part(h.nextFlower) : '');
       else if (h.tested && alive.length === 1 && cut) st = ph.length + ' phenos test-run · #' + alive[0].n + ' kept · waiting for its next run';
-      else if (h.tested) st = h.tested + ' of ' + ph.length + ' phenos test-run · ' + alive.length + ' still in the hunt';
+      else if (h.tested) st = h.tested + ' of ' + ph.length + ' phenos test-run · ' + alive.length + ' still being vetted';
       else st = ph.length + ' pheno' + (ph.length === 1 ? '' : 's') + (seeds ? ' from ' + seeds + ' seeds' : '') + (cut ? ' · ' + cut + ' cut' : '') +
                 (h.nextFlower ? ' · first flower tests start ' + part(h.nextFlower) : '');
     } else if (back) {
@@ -425,12 +425,12 @@ function capsToTitle_(t) {
     V.__RB_BT_NHUNT__ = String((H.hunting || []).length + (H.back || []).length);
     V.__RB_BT_BETA__ = beta.length ? beta.map(function (b) { return tree(btBeta(b), b.name); }).join('') : '<p style="margin: 0; color: #A9A9B2">Nothing in the flower rooms under the Beta Bud label right now. Check back soon.</p>';
     V.__RB_BT_HUNTS__ = (H.hunting || []).length ? H.hunting.map(function (h) { return tree(btHunt(h, f.asOf, false), h.name); }).join('')
-      : '<p style="margin: 0; color: #5B5B63">No packs popped right now. New hunts show up here as soon as the seeds are germinated.</p>';
+      : '<p style="margin: 0; color: #5B5B63">No packs popped right now. New ones show up here as soon as the seeds are germinated.</p>';
     V.__RB_BT_BACK__ = (H.back || []).length ? '<div style="margin: 38px 0 14px"><h3 style="margin: 0; font-family: \'Bebas Neue\', sans-serif; font-weight: 400; font-size: 34px; line-height: 1">Back from seed</h3>' +
-      '<p style="margin: 4px 0 0; font-size: 15px; color: #5B5B63">Old favorites, fresh seeds. A new pack of the same cross can come out different, so these get hunted again too.</p></div>' +
+      '<p style="margin: 4px 0 0; font-size: 15px; color: #5B5B63">Old favorites, fresh seeds. A new pack of the same cross can come out different, so these get vetted again too.</p></div>' +
       '<div data-b="hcs">' + H.back.map(function (h) { return tree(btHunt(h, f.asOf, true), h.name); }).join('') + '</div>' : '';
     V.__RB_BT_CUT__ = (H.cut || []).length ? '<div style="margin: 38px 0 14px"><h3 style="margin: 0; font-family: \'Bebas Neue\', sans-serif; font-weight: 400; font-size: 34px; line-height: 1">Didn\'t make the cut</h3>' +
-      '<p style="margin: 4px 0 0; font-size: 15px; color: #5B5B63">Hunted, tested and let go. Not every pack has a keeper.</p></div>' +
+      '<p style="margin: 4px 0 0; font-size: 15px; color: #5B5B63">Vetted and let go. Not every pack has a keeper.</p></div>' +
       '<ul data-b="cuts">' + H.cut.map(btCut).join('') + '</ul>' +
       (H.cutMore ? '<a href="FamilyTree.dc.html" style="display: inline-block; margin-top: 12px; font-size: 14px; font-weight: 600">+' + H.cutMore + ' more · see every strain we\'ve grown →</a>' : '') : '';
     return V;
