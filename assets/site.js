@@ -542,7 +542,9 @@ function capsToTitle_(t) {
         VM = view(kept.f); window.RB_FEED = kept.f; feedReady = true; go();
       }
     } catch (e) {}
-    var timer = setTimeout(useSnapshot, 4000);
+    // Nov 18: the built-in backup copy can be weeks old ("Landing soon", "Next harvest: soon"), so a first-time visitor waits on
+    // the Redbird loading screen up to 12 seconds for live data before falling back to it. Return visitors draw right away from the copy above.
+    var timer = setTimeout(useSnapshot, feedReady ? 4000 : 12000);
     if (!FEED_URL || typeof fetch !== 'function') { clearTimeout(timer); return useSnapshot(); }
     fetch(FEED_URL, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (f) {
       if (!f || !f.lineup || !f.lineup.length) throw new Error('empty feed');
