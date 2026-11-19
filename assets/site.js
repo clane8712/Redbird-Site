@@ -53,11 +53,14 @@ window.RB_CITIES = {"auburn":[47.303,-122.2],"federalway":[47.316,-122.275],"bel
       // Nov 18: the pheno count sits up top, centered between the Beta Bud tag and the type, so the red harvest line below always fits on one line
       '<div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px">' +
       '<span style="justify-self: start; ' + MONO + '; font-size: 11px; background: #C8102E; color: #FFFFFF; border-radius: 4px; padding: 3px 8px; white-space: nowrap">Beta Bud</span>' +
-      (b.phenos > 1 ? '<span style="' + MONO + '; color: #C9C9D1; border: 1px solid #2E2E31; border-radius: 5px; padding: 2px 7px; font-size: 10.5px; white-space: nowrap">' + b.phenos + ' phenos</span>' : '') +
+      (b.phenos > 1 ? '<span data-ph="top" style="' + MONO + '; color: #C9C9D1; border: 1px solid #2E2E31; border-radius: 5px; padding: 2px 7px; font-size: 10.5px; white-space: nowrap">' + b.phenos + ' phenos</span>' : '') +
       '<span style="grid-column: 3; justify-self: end; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; ' + (DPILL[b.type] || DPILL.Hybrid) + '">' + esc(b.type) + '</span></div>' +
       '<h3 style="margin: 12px 0 8px; font-family: \'Bebas Neue\', sans-serif; font-weight: 400; font-size: 36px; letter-spacing: 1px; line-height: 0.95; overflow-wrap: anywhere">' + esc(b.name) + '</h3>' +
       '<div style="color: #BDBDC6; font-size: 14.5px; line-height: 1.45; padding-bottom: 14px; border-bottom: 1px solid #2E2E31; flex: 1">' + esc(gen(b.genetics)) + '</div>' +
-      '<div style="flex-shrink: 0; padding-top: 14px; ' + MONO + '; font-size: 11.5px; color: #FF8597; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">' + esc(bst(b)) + '</div></div>';
+      // Nov 18: on phones and tablets (one or two cards across) the pheno count sits at the end of the harvest line instead; on desktop it stays up top
+      '<div style="flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding-top: 14px; ' + MONO + '; font-size: 11.5px; color: #FF8597; white-space: nowrap">' +
+      '<span style="min-width: 0; overflow: hidden; text-overflow: ellipsis">' + esc(bst(b)) + '</span>' +
+      (b.phenos > 1 ? '<span data-ph="bot" style="margin-left: auto; color: #C9C9D1; border: 1px solid #2E2E31; border-radius: 5px; padding: 1px 7px; font-size: 10.5px; white-space: nowrap">' + b.phenos + ' phenos</span>' : '') + '</div></div>';
   }
   function btHunt(h, asOf, back) {
     var ph = h.phenos || [], alive = ph.filter(function (p) { return p.alive; }), cut = ph.length - alive.length, seeds = h.seeds || 0;
@@ -426,7 +429,7 @@ function capsToTitle_(t) {
     [].concat(f.lineup || [], f.beta || [], H.hunting || [], H.back || []).forEach(function (x) { seen[kk(x.name)] = 1; });
     V.__RB_BT_NALL__ = String(Object.keys(seen).length);
     V.__RB_BT_NHUNT__ = String((H.hunting || []).length + (H.back || []).length);
-    V.__RB_BT_BETA__ = beta.length ? beta.map(function (b) { return tree(btBeta(b), b.name); }).join('') : '<p style="margin: 0; color: #A9A9B2">Nothing in the flower rooms under the Beta Bud label right now. Check back soon.</p>';
+    V.__RB_BT_BETA__ = beta.length ? '<style>[data-ph="bot"]{display:none}@media (max-width:1100px){[data-ph="top"]{display:none}[data-ph="bot"]{display:inline-block}}</style>' + beta.map(function (b) { return tree(btBeta(b), b.name); }).join('') : '<p style="margin: 0; color: #A9A9B2">Nothing in the flower rooms under the Beta Bud label right now. Check back soon.</p>';
     V.__RB_BT_HUNTS__ = (H.hunting || []).length ? H.hunting.map(function (h) { return tree(btHunt(h, f.asOf, false), h.name); }).join('')
       : '<p style="margin: 0; color: #5B5B63">No packs popped right now. New ones show up here as soon as the seeds are germinated.</p>';
     V.__RB_BT_BACK__ = (H.back || []).length ? '<div style="margin: 38px 0 14px"><h3 style="margin: 0; font-family: \'Bebas Neue\', sans-serif; font-weight: 400; font-size: 34px; line-height: 1">Back from seed</h3>' +
