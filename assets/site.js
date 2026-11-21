@@ -495,7 +495,7 @@ function capsToTitle_(t) {
   // ---- sign-ups: the same Apps Script link takes the form, confirm, manage and unsubscribe requests
   // Phones on cell data sometimes drop a request, so each call gets a 25-second limit and up to 3 tries.
   // Short link actions (confirm, unsubscribe, ...) switch to a plain GET on retry, which is the most reliable kind of request.
-  var GET_OK = { confirm: 1, unsub: 1, resub: 1, sub: 1 };
+  var GET_OK = { confirm: 1, unsub: 1, resub: 1, sub: 1, nsconfirm: 1, nsoff: 1 };
   function once(payload, useGet) {
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = ctl ? setTimeout(function () { ctl.abort(); }, payload.file ? 120000 : 25000) : null;   // résumé uploads get longer
@@ -616,6 +616,38 @@ function capsToTitle_(t) {
                drops: 'Drops', contact: 'Contact', retailers: 'Retailers', merch: 'Merch' };
   // Nov 18: no Products pages any more. Old Products links (and products/, micro-buds/ ... addresses) open the home page at the Products cards.
   var ONE = { Flower: 1, Micro: 1, Prerolls: 1, BetaBud: 1, Rosin: 1 }, ONEH = { products: 1, micro: 1, prerolls: 1, betabud: 1, rosin: 1 };
+  // Nov 19: new strain alerts (Strains page). Sign-up is just an email + a confirm email; ?nsconfirm= / ?nsoff= links
+  // from those emails show their answer in the same strip. Separate from Drops (its own list in the website script).
+  var NS_T0 = Date.now(), NS_MSG = '';
+  function nsShow(doc, text, bad) {
+    var m = doc.querySelector('[data-ns-msg]'); if (!m) return;
+    m.textContent = text; m.style.display = text ? 'block' : 'none'; m.style.color = bad ? '#B00020' : '#15803D'; m.style.fontWeight = '600';
+  }
+  function nsWire(doc) {
+    if (NS_MSG) { nsShow(doc, NS_MSG.text, NS_MSG.bad); var box = doc.querySelector('[data-ns]'); if (box && NS_MSG.jump) { NS_MSG.jump = false; box.scrollIntoView({ block: 'center' }); } }
+    if (doc.__rbNs) return; doc.__rbNs = true;                    // one listener per page; the strip can be redrawn
+    doc.addEventListener('submit', function (ev) {
+      var f = ev.target && ev.target.closest ? ev.target.closest('[data-ns-form]') : null; if (!f) return;
+      ev.preventDefault();
+      var btn = f.querySelector('button'), email = (f.email.value || '').trim();
+      if (!email) { nsShow(doc, 'Please enter your email.', true); return; }
+      btn.disabled = true; btn.textContent = 'Sending…'; nsShow(doc, '');
+      window.RB_API({ action: 'nsignup', email: email, hp: f.website.value || '', ms: Date.now() - NS_T0 }).then(function (j) {
+        NS_MSG = { text: j.ok ? j.message : (j.error || 'Something went wrong. Please try again.'), bad: !j.ok }; nsShow(doc, NS_MSG.text, NS_MSG.bad);
+        if (j.ok) f.email.value = '';
+      }, function () { nsShow(doc, 'Couldn\'t reach us just now. Please try again in a minute.', true); })
+        .then(function () { btn.disabled = false; btn.textContent = 'Notify me'; });
+    }, true);
+  }
+  function nsLink(q) {
+    var m = /[?&](nsconfirm|nsoff)=([^&]+)/.exec(q); if (!m || !window.RB_API) return;
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+    NS_MSG = { text: m[1] === 'nsconfirm' ? 'Confirming…' : 'Unsubscribing…', jump: true };
+    window.RB_API({ action: m[1], t: decodeURIComponent(m[2]) }).then(function (j) {
+      NS_MSG = { text: j.ok ? j.message : (j.error || 'That link didn\'t work.'), bad: !j.ok, jump: true };
+    }, function () { NS_MSG = { text: 'Couldn\'t reach us just now. Please open the link again in a minute.', bad: true, jump: true }; })
+      .then(function () { var fr = document.getElementById('rb-page'); try { nsWire(fr.contentDocument); } catch (e) {} });
+  }
   window.RB_BOOT = function (name, P) {
     var q = location.search, h = (location.hash || '').replace('#', '').toLowerCase();
     if (name === 'Main') {                                    // links in older emails: ?manage=… and #drops go to their page
@@ -623,7 +655,8 @@ function capsToTitle_(t) {
       if (ONEH[h]) window.RB_JUMP = 'products';
       else if (HASH[h] && HASH[h] !== 'Main') { location.replace(P + ROUTES[HASH[h]] + q); return; }
     }
-    if ((name === 'Contact' || name === 'Drops' || name === 'Where') && h) window.RB_TOPIC = h;   // contact/#retail, drops/#strains, where/#wedding-cake
+    if ((name === 'Contact' || name === 'Drops' || name === 'Where') && h) window.RB_TOPIC = h;
+    if (name === 'Strains') nsLink(q);   // contact/#retail, drops/#strains, where/#wedding-cake
     var frame = document.createElement('iframe');
     frame.id = 'rb-page'; frame.title = document.title;
     document.body.insertBefore(frame, document.body.firstChild);
@@ -654,7 +687,8 @@ function capsToTitle_(t) {
         if (/^https?:/.test(href) && !a.target) { ev.preventDefault(); location.href = href; }   // outside links leave the frame
       }, true);
       doc.addEventListener('submit', function (ev) { ev.preventDefault(); }, true);
-      if (window.RB_ART_FILL) window.RB_ART_FILL(doc);   // Nov 19: new strain art from Drive fills in "Art coming" pictures
+      if (window.RB_ART_FILL) window.RB_ART_FILL(doc);
+      if (name === 'Strains') nsWire(doc);   // Nov 19: the "new strains" email sign-up above the lineup   // Nov 19: new strain art from Drive fills in "Art coming" pictures
     });
     var draw = function (again) {
       if (again) { try { window.RB_KEEP_Y = frame.contentWindow.scrollY || 0; } catch (e) {} }   // redraw: come back to the same spot
